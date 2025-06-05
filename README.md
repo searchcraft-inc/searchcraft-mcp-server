@@ -11,12 +11,12 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
   <a href="https://nodejs.org/en/">
     <img src="https://img.shields.io/badge/Node.js-20+-339933.svg?logo=node.js&style=flat" alt="Node.js">
   </a>
-  <a href="https://nodejs.org/en/">
+  <a href="https://expressjs.com/">
     <img src="https://img.shields.io/badge/Express-5.1-330033.svg?logo=express&style=flat" alt="Node.js">
   </a>
 </p>
 
-The Searchcraft MCP Server allows for easily integrating search into MCP clients. Integrate with tools like Claude Desktop, which will allow Claude to search for information on the search index that you specify.
+The Searchcraft MCP Server allows for easily integrating search into MCP clients. Integrates with things like Claude Desktop, which allows Claude to search for information on the search index that you specify.
 
 
 ### Available Tools
