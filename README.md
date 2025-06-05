@@ -21,10 +21,6 @@ The Searchcraft MCP Server allows for easily integrating search into MCP clients
 
 ### Available Tools
 
-**get-preliminary-search-data**
-
-Provides MCP Clients with information about the search index specified in the .env, including facets and available schema fields.
-
 **get-search-results**
 
 Searches for information on the given search index, and returns results.
@@ -32,6 +28,10 @@ Searches for information on the given search index, and returns results.
 **get-status**
 
 Gets the current status of the Searchcraft service.
+
+**get-preliminary-search-data**
+
+Provides information about the configured search index, including facets and available schema fields.
 
 ### Getting Started
 
@@ -115,3 +115,18 @@ http://localhost:<MY-PORT-FROM-ENV>/mcp
 ```
 
 The Inspector allows you to view available tools and to try making test calls to them.
+
+## Resources
+
+- 📘 [Searchcraft Docs](https://docs.searchcraft.io)
+- 🛰️ [Vektron Dashboard](https://vektron.searchcraft.io)
+- 💬 [Searchcraft Discord](https://discord.gg/WteTxPBM)
+- 🧪 [Searchcraft SDK on npm](https://www.npmjs.com/package/@searchcraft/react-sdk)
+
+## License
+
+Licensed under the [Apache 2.0 License](LICENSE).
+
+<p align="center">
+Built with 🛰️ by the <a href="https://searchcraft.io">Searchcraft</a> team
+</p>
