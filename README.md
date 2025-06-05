@@ -23,7 +23,7 @@ The Searchcraft MCP Server allows for easily integrating search into MCP clients
 
 **get-search-results**
 
-Searches for information on the given search index, and returns results.
+Searches for information on the configured search index and returns search results.
 
 **get-status**
 
@@ -90,7 +90,7 @@ In your `claude_desktop_config.json` file, located at `/Users/[My Workspace]]/Li
 }
 ```
 
-[Claude desktop config exampe](claude_desktop_config_example.json)
+[Claude desktop config example](claude_desktop_config_example.example.json)
 
 To view claude's logs for debugging purposes, use the npm script:
 ```bash
