@@ -12,15 +12,48 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
     <img src="https://img.shields.io/badge/Node.js-20+-339933.svg?logo=node.js&style=flat" alt="Node.js">
   </a>
   <a href="https://nodejs.org/en/">
-    <img src="https://img.shields.io/badge/Express-20+-330033.svg?logo=express&style=flat" alt="Node.js">
+    <img src="https://img.shields.io/badge/Express-5.1-330033.svg?logo=express&style=flat" alt="Node.js">
   </a>
 </p>
 
-### What is this repository for? ###
+The Searchcraft MCP Server allows for easily integrating search into MCP clients. Integrate with tools like Claude Desktop, which will allow Claude to search for information on the search index that you specify.
 
-### Running the server
 
-Create `.env` file at project root. Refer to `.env.example` for the env values you need.
+### Available Tools
+
+**get-preliminary-search-data**
+
+Provides MCP Clients with information about the search index specified in the .env, including facets and available schema fields.
+
+**get-search-results**
+
+Searches for information on the given search index, and returns results.
+
+**get-status**
+
+Gets the current status of the Searchcraft service.
+
+### Getting Started
+
+Create `.env` file at project root, and fill in the values:
+
+```
+# Server Config
+USER_AGENT=searchcraft-mcp-server/<project-version>
+DEBUG=true
+PORT=3100
+
+# Searchcraft Config
+ENDPOINT_URL=
+INDEX_NAME=
+READ_KEY=
+INGEST_KEY=
+```
+
+[.env sample](.env.example)
+
+
+You will need a Searchcraft search index. Head to [Vektron ↗︎](https://vektron.searchcraft.io), your command center for creating and configuring indexes, managing settings, and navigating all things Searchcraft.
 
 
 Install dependencies with yarn
@@ -33,8 +66,7 @@ Start the server
 yarn start
 ```
 
-
-### Claude Desktop
+### Use With Claude Desktop
 Claude Desktop is an MCP client that we can connect our MCP server to.
 Since this is a node/express server, you must use `mcp-remote` to bridge it into Claude Desktop.
 We do this rather than use the stdio transport type. This allows more flexibility into where/how the server is hosted.
@@ -58,24 +90,28 @@ In your `claude_desktop_config.json` file, located at `/Users/[My Workspace]]/Li
 }
 ```
 
+[Claude desktop config exampe](claude_desktop_config_example.json)
+
 To view claude's logs for debugging purposes, use the npm script:
 ```bash
 yarn claude-logs
 ```
 
 
-### Inspector
+### Debugging
 
-You can also view the mcp server tools/prompts/resources using the inspector. While the mcp server is running, you can launch the inspector:
+You can view and try out the available tools/prompts/resources using the inspector. While the mcp server is running, you can launch the inspector:
 
 ```bash
 yarn inspect
 ```
 
-Choose Transport Type: Streamable HTTP
-And enter the server url in the input box, and click "Connect". The server url will be something like:
+- Choose Transport Type: Streamable HTTP
+- Specify the URL that the server is running on, including the port number.
+- Hit "Connect"
+
 ```
 http://localhost:<MY-PORT-FROM-ENV>/mcp
 ```
-depending on what port your chose
 
+The Inspector allows you to view available tools and to try making test calls to them.
