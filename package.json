@@ -1,0 +1,35 @@
+{
+    "name": "searchcraft-mcp-server",
+    "version": "0.0.1",
+    "description": "Searchcraft's MCP Server",
+    "type": "module",
+    "main": "index.js",
+    "author": "Searchcraft",
+    "license": "Apache-2.0",
+    "scripts": {
+        "build": "rm -rf dist && node build.mjs",
+        "dev": "tsx watch src/index.ts",
+        "clean": "rm -rf dist",
+        "start": "node dist/server.js",
+        "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/server.js",
+        "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log"
+    },
+    "bin": {
+        "searchcraft": "./dist/server.js"
+    },
+    "files": ["dist"],
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.12.0",
+        "dotenv": "^16.5.0",
+        "express": "^5.1.0",
+        "zod": "^3.25.30"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "1.9.4",
+        "@types/express": "^5.0.2",
+        "@types/node": "^22.15.21",
+        "esbuild": "^0.25.5",
+        "tsx": "^4.19.4",
+        "typescript": "^5.8.3"
+    }
+}

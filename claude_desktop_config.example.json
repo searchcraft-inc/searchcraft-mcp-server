@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+        "searchcraft": {
+            "command": "npx",
+            "args": ["mcp-remote", "http://localhost:3100/mcp"]
+        }
+    }
+}
