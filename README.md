@@ -23,9 +23,9 @@ The Searchcraft MCP Server allows for easily integrating search into MCP clients
 
 | Tool | Description |
 |------|-------------|
-| **get_search_results** | This tool provides an interface for making search queries to the index specified in the environment variables. It allows for complex queries based on fuzzy + exact keyword matching, date ranges, and facets. |
-| **get_search_index_schema** | This tool provides an interface for getting the current search index schema, including schema fields and facet information. Gives the MCP Client additional context about how to construct search queries. |
-| **get_status** | This tool performs a basic health check api request to the Searchcraft service. |
+| **get_search_results** | Performs search queries on the search index provided. It allows for complex queries based on fuzzy + exact keyword matching, date ranges, and facets. |
+| **get_search_index_schema** | Retrieves the current search index schema, including schema fields and facet information. Gives the MCP Client additional context about how to construct search queries. |
+| **get_searchcraft_status** | Performs a basic health check api request to the Searchcraft service. |
 
 ## Getting Started
 
@@ -65,7 +65,9 @@ yarn start
 ```
 
 ## Usage With Claude Desktop
-Claude Desktop is an MCP client that we can connect to our MCP server.
+
+The server must be running in order for Claude Desktop to detect `searchcraft-mcp-server`'s tools.
+
 `searchcraft-mcp-server` uses `StreamableHTTPServerTransport`, so in order to connect it to Claude Desktop, we use [mcp-remote ↗︎](https://github.com/geelen/mcp-remote).
 
 In your claude desktop config file, add the following:
