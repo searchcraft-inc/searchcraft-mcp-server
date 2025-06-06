@@ -3,13 +3,21 @@ import type { SearchcraftQuery } from "../types.js";
 import { debugLog, performSearchcraftRequest } from "../helpers.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-export const registerGetPrelimSearchData = (server: McpServer) => {
+/**
+ * Tool: get_search_index_schema
+ *
+ * This tool provides an interface for getting the current search index schema, including schema fields and facet information.
+ * Gives the MCP Client additional context about how to construct search queries.
+ *
+ * @param server
+ */
+export const registerGetSearchIndexSchema = (server: McpServer) => {
     server.tool(
-        "get-preliminary-search-data",
+        "get_search_index_schema",
         "Gets the schema fields and facet information for the search index in order to understand available fields and facet information for constructing a search query.",
         {},
         async () => {
-            debugLog("[Tool Call] get-preliminary-search-data");
+            debugLog("[Tool Call] get-search-index-schema");
             const baseUrl = process.env.ENDPOINT_URL;
             const readKey = process.env.READ_KEY;
             const federation = process.env.FEDERATION_NAME;

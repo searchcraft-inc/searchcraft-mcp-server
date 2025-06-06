@@ -1,12 +1,10 @@
 import "dotenv/config";
 import express from "express";
-import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createMcpServer } from "./create-mcp-server.js";
-import { debugLog } from "./helpers.js";
 
 const app = express();
+
 app.use(express.json());
 
 app.post("/mcp", async (req, res) => {

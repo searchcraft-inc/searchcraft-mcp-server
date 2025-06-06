@@ -3,11 +3,18 @@ import { z } from "zod";
 import { debugLog, performSearchcraftRequest } from "../helpers.js";
 import type { SearchcraftQuery, SearchcraftQueryPart } from "../types.js";
 
+/**
+ * Tool: get_search_results
+ *
+ * This tool provides an interface for making search queries to the index specified in the environment variables.
+ * It allows for complex queries based on fuzzy + exact keyword matching, date ranges, and facets.
+ *
+ * @param server
+ */
 export const registerGetSearchResults = (server: McpServer) => {
-    // Main search tool
     server.tool(
-        "get-search-results",
-        "Perform a search query using the Searchcraft API with support for fuzzy/exact matching, filters, and advanced query language.",
+        "get_search_results",
+        "Performs a search query using the Searchcraft API with support for fuzzy/exact matching, facets, and date ranges.",
         {
             fuzzyKeywordsThatCanOptionallyAppear: z
                 .array(

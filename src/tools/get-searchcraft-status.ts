@@ -1,9 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { debugLog } from "../helpers.js";
 
+/**
+ * Tool: get_searchcraft_status
+ *
+ * This tool performs a basic health check api request to the searchcraft service.
+ *
+ * @param server
+ */
 export const registerGetSearchcraftStatus = (server: McpServer) => {
     server.tool(
-        "get-searchcraft-status",
+        "get_searchcraft_status",
         "Get the current status of the Searchcraft search service.",
         {},
         async () => {

@@ -1,9 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 
 import {
     registerGetSearchcraftStatus,
-    registerGetPrelimSearchData,
+    registerGetSearchIndexSchema,
     registerGetSearchResults,
 } from "./tools/index.js";
 
@@ -17,25 +16,8 @@ export function createMcpServer(): McpServer {
         },
     });
 
-    server.tool(
-        "get-mcp-node-version",
-        "Get the current version of node that is running",
-        {},
-        async () => {
-            const nodeVersion = process.version;
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: nodeVersion,
-                    },
-                ],
-            };
-        },
-    );
-
     registerGetSearchcraftStatus(server);
-    registerGetPrelimSearchData(server);
+    registerGetSearchIndexSchema(server);
     registerGetSearchResults(server);
 
     return server;

@@ -19,23 +19,18 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
 The Searchcraft MCP Server allows for easily integrating search into MCP clients. Integrates with things like Claude Desktop, which allows Claude to search for information on the search index that you specify.
 
 
-### Available Tools
+## Available Tools
 
-**get-search-results**
+| Tool | Description |
+|------|-------------|
+| **get_search_results** | This tool provides an interface for making search queries to the index specified in the environment variables. It allows for complex queries based on fuzzy + exact keyword matching, date ranges, and facets. |
+| **get_search_index_schema** | This tool provides an interface for getting the current search index schema, including schema fields and facet information. Gives the MCP Client additional context about how to construct search queries. |
+| **get_status** | This tool performs a basic health check api request to the Searchcraft service. |
 
-Searches for information on the configured search index and returns search results.
+## Getting Started
 
-**get-status**
-
-Gets the current status of the Searchcraft service.
-
-**get-preliminary-search-data**
-
-Provides information about the configured search index, including facets and available schema fields.
-
-### Getting Started
-
-Create `.env` file at project root, and fill in the values:
+### Environment Variables
+Create `.env` file at the project's root and fill in the values:
 
 ```
 # Server Config
@@ -56,30 +51,30 @@ INGEST_KEY=
 You will need a Searchcraft search index. Head to [Vektron ↗︎](https://vektron.searchcraft.io), your command center for creating and configuring indexes, managing settings, and navigating all things Searchcraft.
 
 
+### Running the Server
+
 Install dependencies with yarn
 ```bash
 yarn
 ```
 
-Start the server
+Build & Start the server
 ```bash
+yarn build
 yarn start
 ```
 
-### Use With Claude Desktop
-Claude Desktop is an MCP client that we can connect our MCP server to.
-Since this is a node/express server, you must use `mcp-remote` to bridge it into Claude Desktop.
-We do this rather than use the stdio transport type. This allows more flexibility into where/how the server is hosted.
+## Usage With Claude Desktop
+Claude Desktop is an MCP client that we can connect to our MCP server.
+`searchcraft-mcp-server` uses `StreamableHTTPServerTransport`, so in order to connect it to Claude Desktop, we use [mcp-remote ↗︎](https://github.com/geelen/mcp-remote).
 
-https://github.com/geelen/mcp-remote
+In your claude desktop config file, add the following:
 
-
-In your `claude_desktop_config.json` file, located at `/Users/[My Workspace]]/Library/Application Support/Claude/claude_desktop_config.json` put the following:
-
-```
+**claude_desktop_config.json**
+```json
 {
   "mcpServers": {
-    "remote-example": {
+    "searchcraft": {
       "command": "npx",
       "args": [
         "mcp-remote",
@@ -90,15 +85,18 @@ In your `claude_desktop_config.json` file, located at `/Users/[My Workspace]]/Li
 }
 ```
 
+The claude desktop config file can be found at `/Users/[My Workspace]]/Library/Application Support/Claude/claude_desktop_config.json`. If no file exists here you can create it.
+
 [Claude desktop config example](claude_desktop_config_example.example.json)
+
+## Debugging
 
 To view claude's logs for debugging purposes, use the npm script:
 ```bash
 yarn claude-logs
 ```
 
-
-### Debugging
+### Inspector Tool
 
 You can view and try out the available tools/prompts/resources using the inspector. While the mcp server is running, you can launch the inspector:
 
@@ -121,6 +119,7 @@ The Inspector allows you to view available tools and to try making test calls to
 - 📘 [Searchcraft Docs](https://docs.searchcraft.io)
 - 🛰️ [Vektron Dashboard](https://vektron.searchcraft.io)
 - 💬 [Searchcraft Discord](https://discord.gg/WteTxPBM)
+- 🧠 [Searchcraft Reddit](https://www.reddit.com/r/searchcraft/)
 - 🧪 [Searchcraft SDK on npm](https://www.npmjs.com/package/@searchcraft/react-sdk)
 
 ## License
