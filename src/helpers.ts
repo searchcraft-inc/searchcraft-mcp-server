@@ -43,7 +43,10 @@ export const makeSearchcraftRequest = async (
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(
+            `HTTP ${response.status}: ${response.statusText} ${errorText}`,
+        );
     }
 
     const responseText = await response.text();

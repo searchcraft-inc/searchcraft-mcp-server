@@ -152,3 +152,46 @@ export const KeySchema = z.object({
             "Federation name (optional, only for read keys associated with a federation)",
         ),
 });
+
+export const MeasureQueryParamsSchema = z.object({
+    organization_id: z.string().describe("Organization ID to filter by"),
+    application_id: z
+        .string()
+        .optional()
+        .describe("Application ID to filter by"),
+    index_names: z
+        .array(z.string().describe("Index name to filter by"))
+        .transform((arr) => arr.join("|"))
+        .optional()
+        .describe("An array of index names to filter by"),
+
+    user_id: z.string().optional().describe("User ID to filter by"),
+    session_id: z.string().optional().describe("Session ID to filter by"),
+    event_name: z.string().optional().describe("Event name to filter by"),
+    date_start: z
+        .number()
+        .int()
+        .optional()
+        .describe("Start date as Unix timestamp"),
+    date_end: z
+        .number()
+        .int()
+        .optional()
+        .describe("End date as Unix timestamp"),
+    granularity: z
+        .enum(["minutes", "hours", "days", "weeks", "months", "years"])
+        .optional()
+        .describe("Time granularity for aggregating results"),
+    rpp: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Results per page (pagination)"),
+    page: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Page number (pagination)"),
+});
