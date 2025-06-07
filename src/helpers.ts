@@ -25,6 +25,42 @@ export async function performSearchcraftRequest(
     return await response.json();
 }
 
+// Helper function for making HTTP requests
+export const makeSearchcraftRequest = async (
+    endpoint: string,
+    method: string,
+    authKey: string,
+    // biome-ignore lint/suspicious/noExplicitAny: body could be anything
+    body?: any,
+) => {
+    const response = await fetch(endpoint, {
+        method,
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: authKey,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const responseText = await response.text();
+    return responseText ? JSON.parse(responseText) : null;
+};
+
+// Helper function for common error responses
+export const createErrorResponse = (message: string) => ({
+    content: [
+        {
+            type: "text" as const,
+            text: `❌ Error: ${message}`,
+        },
+    ],
+    isError: true,
+});
+
 export function debugLog(
     message: string,
     level: "LOG" | "INFO" | "WARN" | "ERROR" = "LOG",

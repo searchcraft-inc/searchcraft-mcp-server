@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { debugLog, performSearchcraftRequest } from "../helpers.js";
-import type { SearchcraftQuery, SearchcraftQueryPart } from "../types.js";
+import { debugLog, performSearchcraftRequest } from "../../helpers.js";
+import type { SearchcraftQuery, SearchcraftQueryPart } from "../../types.js";
 
 /**
  * Tool: get_search_results
@@ -115,6 +115,10 @@ export const registerGetSearchResults = (server: McpServer) => {
                 .describe(
                     "Represents a collection of groupings of facet paths that search results should be returned from. Each grouping corresponds to a schema field of type: facet.",
                 ),
+            index: z
+                .string()
+                .describe("The name of the index to get search data on."),
+            readKey: z.string().describe("A read key for this index."),
         },
         async ({
             fuzzyKeywordsThatCanOptionallyAppear,
@@ -123,13 +127,13 @@ export const registerGetSearchResults = (server: McpServer) => {
             exactSearchTermsThatCanOptionallyAppear,
             dateRangeFilters,
             facetFilters,
+            index,
+            readKey,
         }) => {
             debugLog("[Tool Call] get-search-results");
             try {
                 const baseUrl = process.env.ENDPOINT_URL;
-                const readKey = process.env.READ_KEY;
                 const federation = process.env.FEDERATION_NAME;
-                const index = process.env.INDEX_NAME;
 
                 if (!baseUrl) {
                     return {

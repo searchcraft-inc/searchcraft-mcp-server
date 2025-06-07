@@ -1,7 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { SearchcraftQuery } from "../types.js";
-import { debugLog, performSearchcraftRequest } from "../helpers.js";
+import type { SearchcraftQuery } from "../../types.js";
+import { debugLog, performSearchcraftRequest } from "../../helpers.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 
 /**
  * Tool: get_search_index_schema
@@ -11,17 +12,19 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
  *
  * @param server
  */
-export const registerGetSearchIndexSchema = (server: McpServer) => {
+export const registerGetPrelimSearchDataSchema = (server: McpServer) => {
     server.tool(
-        "get_search_index_schema",
+        "get_prelim_search_data",
         "Gets the schema fields and facet information for the search index in order to understand available fields and facet information for constructing a search query.",
-        {},
-        async () => {
+        {
+            index: z
+                .string()
+                .describe("The name of the index to get search data on."),
+            readKey: z.string().describe("A read key for this index."),
+        },
+        async ({ index, readKey }) => {
             debugLog("[Tool Call] get-search-index-schema");
             const baseUrl = process.env.ENDPOINT_URL;
-            const readKey = process.env.READ_KEY;
-            const federation = process.env.FEDERATION_NAME;
-            const index = process.env.INDEX_NAME;
 
             // Validate required environment variables
             if (!baseUrl) {
