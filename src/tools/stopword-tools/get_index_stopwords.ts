@@ -1,29 +1,26 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
-    createErrorResponse,
     debugLog,
     makeSearchcraftRequest,
+    createErrorResponse,
 } from "../../helpers.js";
-import { z } from "zod";
 
-export const registerGetDocumentById = (server: McpServer) => {
+export const registerGetIndexStopwords = (server: McpServer) => {
     /**
-     * Tool: get_document_by_id
-     * GET /index/:index/documents/:document_id - Get single document by internal Searchcraft ID
+     * Tool: get_index_stopwords
+     * GET /index/:index_name/stopwords - Get all stopwords for an index
      */
     server.tool(
-        "get_document_by_id",
-        "Get a single document from an index by its internal Searchcraft ID (_id).",
+        "get_index_stopwords",
+        "Get all stopwords for an index, including both default language dictionary and custom stopwords.",
         {
             index_name: z
                 .string()
-                .describe("The name of the index containing the document"),
-            document_id: z
-                .string()
-                .describe("The internal Searchcraft document ID (_id)"),
+                .describe("The name of the index to get stopwords for"),
         },
-        async ({ index_name, document_id }) => {
-            debugLog("[Tool Call] get_document_by_id");
+        async ({ index_name }) => {
+            debugLog("[Tool Call] get_index_stopwords");
             try {
                 const endpointUrl = process.env.ENDPOINT_URL;
                 const adminKey = process.env.ADMIN_KEY;
@@ -39,7 +36,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                     );
                 }
 
-                const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents/${document_id}`;
+                const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/stopwords`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "GET",
@@ -51,7 +48,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                         {
                             type: "resource",
                             resource: {
-                                uri: `searchcraft://document/${index_name}/${document_id}/${Date.now()}`,
+                                uri: `searchcraft://index-stopwords/${index_name}/${Date.now()}`,
                                 mimeType: "application/json",
                                 text: JSON.stringify(response, null, 2),
                             },
@@ -64,7 +61,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                         ? error.message
                         : "Unknown error occurred";
                 return createErrorResponse(
-                    `Failed to get document: ${errorMessage}`,
+                    `Failed to get index stopwords: ${errorMessage}`,
                 );
             }
         },

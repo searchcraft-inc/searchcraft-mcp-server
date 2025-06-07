@@ -1,29 +1,29 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
-    createErrorResponse,
     debugLog,
     makeSearchcraftRequest,
+    createErrorResponse,
 } from "../../helpers.js";
-import { z } from "zod";
 
-export const registerGetDocumentById = (server: McpServer) => {
+export const registerDeleteSynonyms = (server: McpServer) => {
     /**
-     * Tool: get_document_by_id
-     * GET /index/:index/documents/:document_id - Get single document by internal Searchcraft ID
+     * Tool: delete_synonyms
+     * DELETE /index/:index_name/synonyms - Delete specific synonyms from an index
      */
     server.tool(
-        "get_document_by_id",
-        "Get a single document from an index by its internal Searchcraft ID (_id).",
+        "delete_synonyms",
+        "Delete specific synonyms from an index by their keys.",
         {
             index_name: z
                 .string()
-                .describe("The name of the index containing the document"),
-            document_id: z
-                .string()
-                .describe("The internal Searchcraft document ID (_id)"),
+                .describe("The name of the index to delete synonyms from"),
+            synonyms: z
+                .array(z.string())
+                .describe("Array of synonym keys to delete from the index"),
         },
-        async ({ index_name, document_id }) => {
-            debugLog("[Tool Call] get_document_by_id");
+        async ({ index_name, synonyms }) => {
+            debugLog("[Tool Call] delete_synonyms");
             try {
                 const endpointUrl = process.env.ENDPOINT_URL;
                 const adminKey = process.env.ADMIN_KEY;
@@ -39,11 +39,12 @@ export const registerGetDocumentById = (server: McpServer) => {
                     );
                 }
 
-                const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents/${document_id}`;
+                const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/synonyms`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
-                    "GET",
+                    "DELETE",
                     adminKey,
+                    synonyms,
                 );
 
                 return {
@@ -51,9 +52,16 @@ export const registerGetDocumentById = (server: McpServer) => {
                         {
                             type: "resource",
                             resource: {
-                                uri: `searchcraft://document/${index_name}/${document_id}/${Date.now()}`,
+                                uri: `searchcraft://synonyms-deleted/${index_name}/${Date.now()}`,
                                 mimeType: "application/json",
-                                text: JSON.stringify(response, null, 2),
+                                text: JSON.stringify(
+                                    response || {
+                                        message:
+                                            "Synonyms deleted successfully",
+                                    },
+                                    null,
+                                    2,
+                                ),
                             },
                         },
                     ],
@@ -64,7 +72,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                         ? error.message
                         : "Unknown error occurred";
                 return createErrorResponse(
-                    `Failed to get document: ${errorMessage}`,
+                    `Failed to delete synonyms: ${errorMessage}`,
                 );
             }
         },

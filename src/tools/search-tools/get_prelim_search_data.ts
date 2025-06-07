@@ -55,7 +55,7 @@ export const registerGetPrelimSearchDataSchema = (server: McpServer) => {
             const schemaFieldEndpoint = `${baseUrl}/index/${index}`;
             const schemaFieldResponse = await fetch(schemaFieldEndpoint, {
                 headers: {
-                    Authorization: process.env.INGEST_KEY || "",
+                    Authorization: readKey || "",
                 },
             });
             const schemaFieldResponseText = await schemaFieldResponse.text();

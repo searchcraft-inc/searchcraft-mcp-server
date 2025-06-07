@@ -35,7 +35,7 @@ export const registerAddDocuments = (server: McpServer) => {
                 }
                 if (!adminKey) {
                     return createErrorResponse(
-                        "INGEST_KEY environment variable is required",
+                        "ADMIN_KEY environment variable is required",
                     );
                 }
 

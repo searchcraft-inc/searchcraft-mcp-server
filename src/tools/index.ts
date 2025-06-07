@@ -4,3 +4,6 @@ export * from "./authentication-tools/index.js";
 export * from "./document-tools/index.js";
 export * from "./index-tools/index.js";
 export * from "./measure-tools/index.js";
+export * from "./federation-tools/index.js";
+export * from "./stopword-tools/index.js";
+export * from "./synonym-tools/index.js";

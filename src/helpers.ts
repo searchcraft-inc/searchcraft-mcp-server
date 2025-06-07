@@ -25,7 +25,6 @@ export async function performSearchcraftRequest(
     return await response.json();
 }
 
-// Helper function for making HTTP requests
 export const makeSearchcraftRequest = async (
     endpoint: string,
     method: string,

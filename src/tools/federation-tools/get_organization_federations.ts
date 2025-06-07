@@ -1,29 +1,26 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
-    createErrorResponse,
     debugLog,
     makeSearchcraftRequest,
+    createErrorResponse,
 } from "../../helpers.js";
-import { z } from "zod";
 
-export const registerGetDocumentById = (server: McpServer) => {
+export const registerGetOrganizationFederations = (server: McpServer) => {
     /**
-     * Tool: get_document_by_id
-     * GET /index/:index/documents/:document_id - Get single document by internal Searchcraft ID
+     * Tool: get_organization_federations
+     * GET /federation/organization/:organization_id - Returns all federations for an organization
      */
     server.tool(
-        "get_document_by_id",
-        "Get a single document from an index by its internal Searchcraft ID (_id).",
+        "get_organization_federations",
+        "Get a list of all federations for a specific organization.",
         {
-            index_name: z
+            organization_id: z
                 .string()
-                .describe("The name of the index containing the document"),
-            document_id: z
-                .string()
-                .describe("The internal Searchcraft document ID (_id)"),
+                .describe("The organization ID to get federations for"),
         },
-        async ({ index_name, document_id }) => {
-            debugLog("[Tool Call] get_document_by_id");
+        async ({ organization_id }) => {
+            debugLog("[Tool Call] get_organization_federations");
             try {
                 const endpointUrl = process.env.ENDPOINT_URL;
                 const adminKey = process.env.ADMIN_KEY;
@@ -39,7 +36,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                     );
                 }
 
-                const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents/${document_id}`;
+                const endpoint = `${endpointUrl.replace(/\/$/, "")}/federation/organization/${organization_id}`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "GET",
@@ -51,7 +48,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                         {
                             type: "resource",
                             resource: {
-                                uri: `searchcraft://document/${index_name}/${document_id}/${Date.now()}`,
+                                uri: `searchcraft://organization-federations/${organization_id}/${Date.now()}`,
                                 mimeType: "application/json",
                                 text: JSON.stringify(response, null, 2),
                             },
@@ -64,7 +61,7 @@ export const registerGetDocumentById = (server: McpServer) => {
                         ? error.message
                         : "Unknown error occurred";
                 return createErrorResponse(
-                    `Failed to get document: ${errorMessage}`,
+                    `Failed to get organization federations: ${errorMessage}`,
                 );
             }
         },

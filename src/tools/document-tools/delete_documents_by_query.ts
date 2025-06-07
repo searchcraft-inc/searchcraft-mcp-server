@@ -26,16 +26,16 @@ export const registerDeleteDocumentsByQuery = (server: McpServer) => {
             debugLog("[Tool Call] delete_documents_by_query");
             try {
                 const endpointUrl = process.env.ENDPOINT_URL;
-                const ingestKey = process.env.INGEST_KEY;
+                const adminKey = process.env.ADMIN_KEY;
 
                 if (!endpointUrl) {
                     return createErrorResponse(
                         "ENDPOINT_URL environment variable is required",
                     );
                 }
-                if (!ingestKey) {
+                if (!adminKey) {
                     return createErrorResponse(
-                        "INGEST_KEY environment variable is required",
+                        "ADMIN_KEY environment variable is required",
                     );
                 }
 
@@ -43,7 +43,7 @@ export const registerDeleteDocumentsByQuery = (server: McpServer) => {
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "DELETE",
-                    ingestKey,
+                    adminKey,
                     query,
                 );
 

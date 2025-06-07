@@ -132,14 +132,14 @@ export const KeySchema = z.object({
         .describe("Permission level: 1=read, 15=ingest, 63=admin"),
     name: z.string().describe("Name of this key"),
     organization_id: z
-        .number()
+        .string()
         .optional()
         .describe("Organization ID (optional)"),
     organization_name: z
         .string()
         .optional()
         .describe("Organization name (optional)"),
-    application_id: z.number().optional().describe("Application ID (optional)"),
+    application_id: z.string().optional().describe("Application ID (optional)"),
     application_name: z
         .string()
         .optional()
@@ -194,4 +194,33 @@ export const MeasureQueryParamsSchema = z.object({
         .positive()
         .optional()
         .describe("Page number (pagination)"),
+});
+
+export const FederationSchema = z.object({
+    name: z.string().describe("Federation name"),
+    friendly_name: z.string().describe("Human-readable federation name"),
+    created_by: z
+        .string()
+        .optional()
+        .describe("ID of user who created the federation"),
+    last_modified_by: z
+        .string()
+        .optional()
+        .describe("ID of user who last modified the federation"),
+    organization_id: z
+        .string()
+        .optional()
+        .describe("Organization ID this federation belongs to"),
+    index_configurations: z
+        .array(
+            z.object({
+                name: z.string().describe("Index name"),
+                weight_multiplier: z
+                    .number()
+                    .min(0.0)
+                    .max(10.0)
+                    .describe("Weight multiplier for this index (0.0 - 10.0)"),
+            }),
+        )
+        .describe("Array of index configurations"),
 });
