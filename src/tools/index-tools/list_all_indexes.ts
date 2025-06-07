@@ -18,16 +18,16 @@ export const registerListAllIndexes = (server: McpServer) => {
             debugLog("[Tool Call] list_all_indexes");
             try {
                 const endpointUrl = process.env.ENDPOINT_URL;
-                const readKey = process.env.READ_KEY;
+                const adminKey = process.env.ADMIN_KEY;
 
                 if (!endpointUrl) {
                     return createErrorResponse(
                         "ENDPOINT_URL environment variable is required",
                     );
                 }
-                if (!readKey) {
+                if (!adminKey) {
                     return createErrorResponse(
-                        "READ_KEY environment variable is required",
+                        "ADMIN_KEY environment variable is required",
                     );
                 }
 
@@ -35,7 +35,7 @@ export const registerListAllIndexes = (server: McpServer) => {
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "GET",
-                    readKey,
+                    adminKey,
                 );
 
                 return {
