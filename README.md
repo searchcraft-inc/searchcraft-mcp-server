@@ -110,19 +110,19 @@ DEBUG=true
 PORT=3100
 
 # Searchcraft Config
-ENDPOINT_URL=
-ADMIN_KEY=
-READ_KEY=
-INGEST_KEY=
+ENDPOINT_URL= # The endpoint url of your Searchcraft Cluster
+ADMIN_KEY= # The admin key (super user key) of your Searchcraft Cluster
 ```
 
 [.env sample](.env.example)
 
 
-You will need a Searchcraft search index. Head to [Vektron ↗︎](https://vektron.searchcraft.io), your command center for creating and configuring indexes, managing settings, and navigating all things Searchcraft.
-
-
 ### Running the Server
+
+Make sure your environment has the correct version of node selected.
+```bash
+nvm use
+```
 
 Install dependencies with yarn
 ```bash
@@ -159,6 +159,10 @@ In your claude desktop config file, add the following:
 ```
 
 The claude desktop config file can be found at `/Users/[My Workspace]]/Library/Application Support/Claude/claude_desktop_config.json`. If no file exists here you can create it.
+
+### Claude Desktop Node Version
+
+We have experienced that when Claude Desktop runs the command to connect to the MCP server, it can sometimes choose an older version of Node. If older versions of node are installed on your system, this can lead to issues. Ensure that your default Node version on your system is high enough to properly run the server.
 
 [Claude desktop config example](claude_desktop_config_example.example.json)
 
