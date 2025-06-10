@@ -16,8 +16,7 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
   </a>
 </p>
 
-The Searchcraft MCP Server allows for easily integrating search into MCP clients. Integrates with things like Claude Desktop, which allows Claude to search for information on the search index that you specify.
-
+The Searchcraft MCP Server provides a suite of tools for managing your Searchcraft cluster's Documents, Indexes, Federations, Access Keys, and Analytics. It enables MCP Clients, like Claude Desktop, to be prompted in plain English to perform administrative actions like setting up search indexes, access keys, ingesting documents, viewing analytics, searching indexes, and more.
 
 ## Available Tools
 
@@ -160,11 +159,11 @@ In your claude desktop config file, add the following:
 
 The claude desktop config file can be found at `/Users/[My Workspace]]/Library/Application Support/Claude/claude_desktop_config.json`. If no file exists here you can create it.
 
+[Claude desktop config example](claude_desktop_config_example.example.json)
+
 ### Claude Desktop Node Version
 
 We have experienced that when Claude Desktop runs the command to connect to the MCP server, it can sometimes choose an older version of Node. If older versions of node are installed on your system, this can lead to issues. Ensure that your default Node version on your system is high enough to properly run the server.
-
-[Claude desktop config example](claude_desktop_config_example.example.json)
 
 ## Debugging
 
