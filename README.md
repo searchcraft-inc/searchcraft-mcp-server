@@ -21,11 +21,82 @@ The Searchcraft MCP Server allows for easily integrating search into MCP clients
 
 ## Available Tools
 
-| Tool | Description |
-|------|-------------|
-| **get_search_results** | Performs search queries on the search index provided. It allows for complex queries based on fuzzy + exact keyword matching, date ranges, and facets. |
-| **get_search_index_schema** | Retrieves the current search index schema, including schema fields and facet information. Gives the MCP Client additional context about how to construct search queries. |
-| **get_searchcraft_status** | Performs a basic health check api request to the Searchcraft service. |
+### Index Management
+
+| Tool Name | Description |
+|-----------|-------------|
+| create_index | Create a new index with the specified schema. This will empty the index if it already exists. |
+| delete_index | Delete an index and all its documents permanently. |
+| get_all_index_stats | Get document counts and statistics for all indexes. |
+| get_index_schema | Get the schema definition for a specific index. |
+| get_index_stats | Get statistics and metadata for a specific index (document count, etc.). |
+| list_all_indexes | Get a list of all indexes in the Searchcraft instance. |
+| patch_index | Make partial configuration changes to an index schema (search_fields, weight_multipliers, etc.). |
+| update_index | Replace the entire contents of an existing index with a new schema definition. |
+
+### Document Management
+
+| Tool Name | Description |
+|-----------|-------------|
+| add_documents | Add one or multiple documents to an index. Documents should be provided as an array of JSON objects. |
+| delete_all_documents | Delete all documents from an index. The index will continue to exist after all documents are deleted. |
+| delete_document_by_id | Delete a single document from an index by its internal Searchcraft ID (_id). |
+| delete_documents_by_field | Delete one or several documents from an index by field term match (e.g., {id: 'xyz'} or {title: 'foo'}). |
+| delete_documents_by_query | Delete one or several documents from an index by query match. |
+| get_document_by_id | Get a single document from an index by its internal Searchcraft ID (_id). |
+
+### Federation Management
+
+| Tool Name | Description |
+|-----------|-------------|
+| create_federation | Create or update a federation with the specified configuration. |
+| delete_federation | Delete a federation permanently. |
+| get_federation_details | Get detailed information for a specific federation. |
+| get_federation_stats | Get document counts per index for a federation as well as the total document count. |
+| get_organization_federations | Get a list of all federations for a specific organization. |
+| list_all_federations | Get a list of all federations in the Searchcraft instance. |
+| update_federation | Replace the current federation entity with an updated one. |
+
+### Authentication & Key Management
+
+| Tool Name | Description |
+|-----------|-------------|
+| create_key | Create a new authentication key with specified permissions and access controls. |
+| delete_all_keys | Delete all authentication keys on the Searchcraft cluster. Use with extreme caution! |
+| delete_key | Delete a specific authentication key permanently. |
+| get_application_keys | Get a list of all authentication keys associated with a specific application. |
+| get_federation_keys | Get a list of all authentication keys associated with a specific federation. |
+| get_key_details | Get detailed information for a specific authentication key. |
+| get_organization_keys | Get a list of all authentication keys associated with a specific organization. |
+| list_all_keys | Get a list of all authentication keys on the Searchcraft cluster. |
+| update_key | Update an existing authentication key with new configuration. |
+
+### Stopwords Management
+
+| Tool Name | Description |
+|-----------|-------------|
+| add_stopwords | Add custom stopwords to an index. These are added on top of the default language-specific dictionary. |
+| delete_all_stopwords | Delete all custom stopwords from an index. This only affects custom stopwords, not the default language dictionary. |
+| delete_stopwords | Delete specific custom stopwords from an index. This only affects custom stopwords, not the default language dictionary. |
+| get_index_stopwords | Get all stopwords for an index, including both default language dictionary and custom stopwords. |
+
+### Synonyms Management
+
+| Tool Name | Description |
+|-----------|-------------|
+| add_synonyms | Add synonyms to an index. Synonyms only work with fuzzy queries, not exact match queries. |
+| delete_all_synonyms | Delete all synonyms from an index. |
+| delete_synonyms | Delete specific synonyms from an index by their keys. |
+| get_index_synonyms | Get all synonyms defined for an index. |
+
+### Search & Measurement
+
+| Tool Name | Description |
+|-----------|-------------|
+| get_measure_conversion | Get measurement conversion data with optional filtering and aggregation parameters. |
+| get_measure_summary | Get measurement summary data with optional filtering and aggregation parameters. |
+| get_search_results | Performs a search query using the Searchcraft API with support for fuzzy/exact matching, facets, and date ranges. |
+| get_searchcraft_status | Get the current status of the Searchcraft search service. |
 
 ## Getting Started
 
@@ -40,7 +111,7 @@ PORT=3100
 
 # Searchcraft Config
 ENDPOINT_URL=
-INDEX_NAME=
+ADMIN_KEY=
 READ_KEY=
 INGEST_KEY=
 ```

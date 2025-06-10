@@ -1,10 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import {
-    registerGetSearchcraftStatus,
-    registerGetSearchIndexSchema,
-    registerGetSearchResults,
-} from "./tools/index.js";
+import * as RegisterTools from "./tools/index.js";
 
 export function createMcpServer(): McpServer {
     const server = new McpServer({
@@ -16,9 +12,10 @@ export function createMcpServer(): McpServer {
         },
     });
 
-    registerGetSearchcraftStatus(server);
-    registerGetSearchIndexSchema(server);
-    registerGetSearchResults(server);
+    for (const functionName of Object.keys(RegisterTools)) {
+        // @ts-ignore
+        RegisterTools[functionName](server);
+    }
 
     return server;
 }
