@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/searchcraft-inc-searchcraft-mcp-server-badge.png)](https://mseep.ai/app/searchcraft-inc-searchcraft-mcp-server)
+
 <img alt="ReTail website screenshot" src="./header.png">
 <h1 align="center">searchcraft-mcp-server</h1>
 <p align="center">
