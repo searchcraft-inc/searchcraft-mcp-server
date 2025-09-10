@@ -9,7 +9,7 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
     <img src="https://img.shields.io/badge/TypeScript-5.8-blue.svg?logo=typescript&style=flat" alt="TypeScript">
   </a>
   <a href="https://nodejs.org/en/">
-    <img src="https://img.shields.io/badge/Node.js-20+-339933.svg?logo=node.js&style=flat" alt="Node.js">
+    <img src="https://img.shields.io/badge/Node.js-22+-339933.svg?logo=node.js&style=flat" alt="Node.js">
   </a>
   <a href="https://expressjs.com/">
     <img src="https://img.shields.io/badge/Express-5.1-330033.svg?logo=express&style=flat" alt="Node.js">
