@@ -116,7 +116,7 @@ ADMIN_KEY= # The admin key (super user key) of your Searchcraft Cluster
 [.env sample](.env.example)
 
 
-### Running the Server
+### Installation & Setup
 
 Make sure your environment has the correct version of node selected.
 ```bash
@@ -128,19 +128,50 @@ Install dependencies with yarn
 yarn
 ```
 
-Build & Start the server
+Build the server
 ```bash
 yarn build
-yarn start
 ```
 
-## Usage With Claude Desktop
+This creates two server versions:
+- `dist/server.js` - HTTP server for testing and remote deployment
+- `dist/stdio-server.js` - stdio server for Claude Desktop
 
-The server must be running in order for Claude Desktop to detect `searchcraft-mcp-server`'s tools.
+## Usage
 
-`searchcraft-mcp-server` uses `StreamableHTTPServerTransport`, so in order to connect it to Claude Desktop, we use [mcp-remote ↗︎](https://github.com/geelen/mcp-remote).
+### Option 1: Claude Desktop (stdio) - Recommended
 
-In your claude desktop config file, add the following:
+For local use with Claude Desktop, use the stdio version which provides better performance and reliability.
+
+**claude_desktop_config.json**
+```json
+{
+  "mcpServers": {
+    "searchcraft": {
+      "command": "node",
+      "args": [
+        "/path/to/searchcraft-mcp-server/dist/stdio-server.js"
+      ]
+    }
+  }
+}
+```
+
+The claude desktop config file can be found at:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+If the file doesn't exist, create it.
+
+### Option 2: HTTP Server (for testing/remote deployment)
+
+Start the HTTP server for testing, debugging, or remote deployment:
+
+```bash
+yarn start  # Starts HTTP server on port 3100
+```
+
+For Claude Desktop with HTTP server, you'll need [mcp-remote](https://github.com/geelen/mcp-remote):
 
 **claude_desktop_config.json**
 ```json
@@ -150,45 +181,97 @@ In your claude desktop config file, add the following:
       "command": "npx",
       "args": [
         "mcp-remote",
-        "http://localhost:<MY-PORT-FROM-ENV>/mcp"
+        "http://localhost:3100/mcp"
       ]
     }
   }
 }
 ```
 
-The claude desktop config file can be found at `/Users/[My Workspace]]/Library/Application Support/Claude/claude_desktop_config.json`. If no file exists here you can create it.
+### Available Scripts
 
-[Claude desktop config example](claude_desktop_config_example.example.json)
+```bash
+# Development
+yarn dev          # Watch HTTP server
+yarn dev:stdio    # Watch stdio server
 
-### Claude Desktop Node Version
+# Production
+yarn start        # Start HTTP server
+yarn start:stdio  # Start stdio server
 
-We have experienced that when Claude Desktop runs the command to connect to the MCP server, it can sometimes choose an older version of Node. If older versions of node are installed on your system, this can lead to issues. Ensure that your default Node version on your system is high enough to properly run the server.
+# Testing
+yarn inspect      # Launch MCP inspector
+yarn claude-logs  # View Claude Desktop logs
+```
+
+## stdio vs HTTP: Which to Choose?
+
+| Feature | stdio (Recommended) | HTTP |
+|---------|-------------------|------|
+| **Performance** | ✅ Direct IPC, lower latency | ⚠️ HTTP overhead |
+| **Security** | ✅ No exposed ports | ⚠️ Network port required |
+| **Simplicity** | ✅ No port management | ⚠️ Port conflicts possible |
+| **Claude Desktop** | ✅ Native support | ⚠️ Requires mcp-remote |
+| **Remote Access** | ❌ Local only | ✅ Can deploy remotely |
+| **Testing** | ⚠️ Requires MCP tools | ✅ Easy with curl/Postman |
+| **Multiple Clients** | ❌ One client at a time | ✅ Multiple concurrent clients |
+
+**Use stdio when:**
+- Using Claude Desktop locally
+- You want the best performance
+- You prefer simplicity
+
+**Use HTTP when:**
+- You need remote access
+- You want easy testing/debugging
+- You need multiple concurrent clients
+- You're deploying to a server
 
 ## Debugging
 
-To view claude's logs for debugging purposes, use the npm script:
+### Claude Desktop Logs
+
+To view Claude Desktop's logs for debugging MCP connections:
 ```bash
 yarn claude-logs
 ```
 
-### Inspector Tool
+### Testing with MCP Inspector
 
-You can view and try out the available tools/prompts/resources using the inspector. While the mcp server is running, you can launch the inspector:
+The MCP Inspector allows you to test your server tools interactively.
 
+**For stdio server (recommended):**
 ```bash
 yarn inspect
 ```
+- Choose Transport Type: stdio
+- Command: `node dist/stdio-server.js`
 
+**For HTTP server:**
+```bash
+yarn start  # Start HTTP server first
+yarn inspect
+```
 - Choose Transport Type: Streamable HTTP
-- Specify the URL that the server is running on, including the port number.
-- Hit "Connect"
+- URL: `http://localhost:3100/mcp`
 
-```
-http://localhost:<MY-PORT-FROM-ENV>/mcp
+### Manual Testing
+
+**Test HTTP server:**
+```bash
+# Health check
+curl http://localhost:3100/health
+
+# Test MCP endpoint
+curl -X POST http://localhost:3100/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}'
 ```
 
-The Inspector allows you to view available tools and to try making test calls to them.
+**Test stdio server:**
+```bash
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | node dist/stdio-server.js
+```
 
 ## Resources
 

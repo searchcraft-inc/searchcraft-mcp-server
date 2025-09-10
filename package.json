@@ -9,13 +9,16 @@
     "scripts": {
         "build": "rm -rf dist && node build.mjs",
         "dev": "tsx watch src/index.ts",
+        "dev:stdio": "tsx watch src/stdio-server.ts",
         "clean": "rm -rf dist",
         "start": "node dist/server.js",
-        "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/server.js",
+        "start:stdio": "node dist/stdio-server.js",
+        "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/stdio-server.js",
         "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log"
     },
     "bin": {
-        "searchcraft": "./dist/server.js"
+        "searchcraft": "./dist/server.js",
+        "searchcraft-stdio": "./dist/stdio-server.js"
     },
     "files": ["dist"],
     "dependencies": {
