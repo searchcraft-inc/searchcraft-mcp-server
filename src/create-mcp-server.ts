@@ -2,10 +2,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import * as RegisterTools from "./tools/index.js";
 
+declare const __PACKAGE_VERSION__: string;
+
 export function createMcpServer(): McpServer {
     const server = new McpServer({
         name: "searchcraft-mcp-server",
-        version: "0.0.1",
+        version: __PACKAGE_VERSION__,
         capabilities: {
             resources: {},
             tools: {},

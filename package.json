@@ -1,6 +1,6 @@
 {
     "name": "searchcraft-mcp-server",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Searchcraft's MCP Server",
     "type": "module",
     "main": "index.js",

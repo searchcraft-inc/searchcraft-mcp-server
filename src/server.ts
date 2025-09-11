@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./create-mcp-server.js";
+declare const __PACKAGE_VERSION__: string;
 
 const app = express();
 
@@ -65,7 +66,7 @@ app.get("/health", (req, res) => {
     res.json({
         status: "ok",
         service: "searchcraft-mcp-server",
-        version: "0.0.1",
+        version: __PACKAGE_VERSION__,
     });
 });
 
