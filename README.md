@@ -20,7 +20,13 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 
 ## Available Tools
 
-### Index Management
+The Searchcraft MCP Server provides two main categories of tools:
+
+### Engine API Tools
+
+These tools provide direct access to your Searchcraft cluster's core functionality for managing indexes, documents, federations, authentication, and search operations.
+
+#### Index Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -33,7 +39,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | patch_index | Make partial configuration changes to an index schema (search_fields, weight_multipliers, etc.). |
 | update_index | Replace the entire contents of an existing index with a new schema definition. |
 
-### Document Management
+#### Document Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -44,7 +50,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | delete_documents_by_query | Delete one or several documents from an index by query match. |
 | get_document_by_id | Get a single document from an index by its internal Searchcraft ID (_id). |
 
-### Federation Management
+#### Federation Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -56,7 +62,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | list_all_federations | Get a list of all federations in the Searchcraft instance. |
 | update_federation | Replace the current federation entity with an updated one. |
 
-### Authentication & Key Management
+#### Authentication & Key Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -70,7 +76,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | list_all_keys | Get a list of all authentication keys on the Searchcraft cluster. |
 | update_key | Update an existing authentication key with new configuration. |
 
-### Stopwords Management
+#### Stopwords Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -79,7 +85,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | delete_stopwords | Delete specific custom stopwords from an index. This only affects custom stopwords, not the default language dictionary. |
 | get_index_stopwords | Get all stopwords for an index, including both default language dictionary and custom stopwords. |
 
-### Synonyms Management
+#### Synonyms Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -88,14 +94,39 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | delete_synonyms | Delete specific synonyms from an index by their keys. |
 | get_index_synonyms | Get all synonyms defined for an index. |
 
-### Search & Measurement
+#### Search & Analytics
 
 | Tool Name | Description |
 |-----------|-------------|
-| get_measure_conversion | Get measurement conversion data with optional filtering and aggregation parameters. |
-| get_measure_summary | Get measurement summary data with optional filtering and aggregation parameters. |
+| get_measure_conversion | Get measurement conversion data with optional filtering and aggregation parameters. *requires Clickhouse if running locally |
+| get_measure_summary | Get measurement summary data with optional filtering and aggregation parameters. *requires Clickhouse if running locally|
 | get_search_results | Performs a search query using the Searchcraft API with support for fuzzy/exact matching, facets, and date ranges. |
+| get_prelim_search_data | Get schema fields and facet information for a search index to understand available fields for constructing queries. |
 | get_searchcraft_status | Get the current status of the Searchcraft search service. |
+
+### Import Tools
+
+These tools provide workflows for importing JSON data and automatically generating Searchcraft schemas. Perfect for quickly setting up new indexes from existing data sources.
+
+| Tool Name | Description |
+|-----------|-------------|
+| analyze_json_from_file | Read JSON data from a local file and analyze its structure to understand field types and patterns for Searchcraft index schema generation. |
+| analyze_json_from_url | Fetch JSON data from a URL and analyze its structure to understand field types and patterns for Searchcraft index schema generation. |
+| generate_searchcraft_schema | Generate a complete Searchcraft index schema from analyzed JSON structure, with customizable options for search fields, weights, and other index settings. |
+| create_index_from_json | Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, and creates the index in one step. |
+
+#### Import Tools Workflow
+
+The import tools are designed to work together in a streamlined workflow:
+
+1. **Analyze** → Use `analyze_json_from_file` or `analyze_json_from_url` to examine your JSON data structure
+2. **Generate** → Use `generate_searchcraft_schema` to create a customized Searchcraft schema from the analysis
+3. **Create** → Use the Engine API `create_index` tool to create the index with your generated schema
+4. **Import** → Use `add_documents` to populate your new index with data
+
+**Or use the all-in-one approach:**
+
+- **One-Step** → Use `create_index_from_json` to analyze, generate schema, and create the index all in one command
 
 ## Getting Started
 
@@ -163,7 +194,175 @@ The claude desktop config file can be found at:
 
 If the file doesn't exist, create it.
 
-### Option 2: HTTP Server (for testing/remote deployment)
+### Option 2: Claude Code
+
+For use with Claude Code, use the CLI to configure the MCP server:
+
+**Basic setup:**
+```bash
+# Add the Searchcraft MCP server to Claude Code
+claude mcp add searchcraft -- node /path/to/searchcraft-mcp-server/dist/stdio-server.js
+```
+
+**With environment variables:**
+```bash
+# Add with your Searchcraft cluster configuration
+claude mcp add searchcraft \
+  --env ENDPOINT_URL=https://your-cluster.searchcraft.io \
+  --env ADMIN_KEY=your_admin_key_here \
+  -- node /path/to/searchcraft-mcp-server/dist/stdio-server.js
+```
+
+**Configuration scopes:**
+- `--scope local` (default): Available only to you in the current project
+- `--scope project`: Shared with team via `.mcp.json` file (recommended for teams)
+- `--scope user`: Available to you across all projects
+
+**Managing servers:**
+```bash
+# List configured servers
+claude mcp list
+
+# Check server status
+/mcp
+
+# Remove server
+claude mcp remove searchcraft
+```
+
+### Option 3: Open WebUI (via Pipelines)
+
+Open WebUI supports MCP servers through its Pipelines framework. This requires creating a custom pipeline that bridges your MCP server to Open WebUI.
+
+**Step 1: Start the Searchcraft MCP HTTP server**
+```bash
+yarn start  # Starts HTTP server on port 3100
+```
+
+**Step 2: Create an MCP Pipeline for Open WebUI**
+
+Create a file called `searchcraft_mcp_pipeline.py`:
+
+```python
+"""
+title: Searchcraft MCP Pipeline
+author: Searchcraft Team
+version: 1.0.0
+license: Apache-2.0
+description: A pipeline that integrates Searchcraft MCP server with Open WebUI
+requirements: requests
+"""
+
+import requests
+import json
+from typing import List, Union, Generator, Iterator
+from pydantic import BaseModel
+
+
+class Pipeline:
+    class Valves(BaseModel):
+        MCP_SERVER_URL: str = "http://localhost:3100/mcp"
+        ENDPOINT_URL: str = ""
+        ADMIN_KEY: str = ""
+
+    def __init__(self):
+        self.name = "Searchcraft MCP Pipeline"
+        self.valves = self.Valves()
+
+    async def on_startup(self):
+        print(f"on_startup:{__name__}")
+
+    async def on_shutdown(self):
+        print(f"on_shutdown:{__name__}")
+
+    def pipe(
+        self, user_message: str, model_id: str, messages: List[dict], body: dict
+    ) -> Union[str, Generator, Iterator]:
+        # This pipeline acts as a bridge between Open WebUI and your MCP server
+        # You can customize this to handle specific Searchcraft operations
+
+        # Example: If user mentions search operations, route to MCP server
+        if any(keyword in user_message.lower() for keyword in ['search', 'index', 'document', 'searchcraft']):
+            try:
+                # Initialize MCP session
+                init_payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "open-webui-pipeline", "version": "1.0.0"}
+                    }
+                }
+
+                response = requests.post(self.valves.MCP_SERVER_URL, json=init_payload)
+
+                if response.status_code == 200:
+                    # Add context about available Searchcraft tools
+                    enhanced_message = f"""
+{user_message}
+
+[Available Searchcraft MCP Tools: create_index, delete_index, add_documents, get_search_results, list_all_indexes, get_index_stats, create_key, delete_key, and 20+ more tools for managing Searchcraft clusters]
+"""
+                    return enhanced_message
+
+            except Exception as e:
+                print(f"MCP connection error: {e}")
+
+        return user_message
+```
+
+**Step 3: Install the Pipeline in Open WebUI**
+
+1. **Via Admin Panel:**
+   - Go to Admin Settings → Pipelines
+   - Click "Add Pipeline"
+   - Paste the pipeline code above
+   - Configure the valves with your Searchcraft settings:
+     - `MCP_SERVER_URL`: `http://localhost:3100/mcp`
+     - `ENDPOINT_URL`: Your Searchcraft cluster URL
+     - `ADMIN_KEY`: Your Searchcraft admin key
+
+2. **Via Docker Environment:**
+   ```bash
+   # Save the pipeline to a file and mount it
+   docker run -d -p 3000:8080 \
+     -v open-webui:/app/backend/data \
+     -v ./searchcraft_mcp_pipeline.py:/app/backend/data/pipelines/searchcraft_mcp_pipeline.py \
+     --name open-webui \
+     ghcr.io/open-webui/open-webui:main
+   ```
+
+**Step 4: Configure Open WebUI to use Pipelines**
+
+1. Start Open WebUI with Pipelines support:
+   ```bash
+   # Using Docker Compose (recommended)
+   services:
+     openwebui:
+       image: ghcr.io/open-webui/open-webui:main
+       ports:
+         - "3000:8080"
+       volumes:
+         - open-webui:/app/backend/data
+       environment:
+         - OPENAI_API_BASE_URL=http://pipelines:9099
+         - OPENAI_API_KEY=0p3n-w3bu!
+
+     pipelines:
+       image: ghcr.io/open-webui/pipelines:main
+       volumes:
+         - pipelines:/app/pipelines
+       environment:
+         - PIPELINES_API_KEY=0p3n-w3bu!
+   ```
+
+2. In Open WebUI Settings → Connections:
+   - Set OpenAI API URL to your Pipelines instance
+   - Enable the Searchcraft MCP Pipeline
+
+### Option 4: HTTP Server (for testing/remote deployment)
 
 Start the HTTP server for testing, debugging, or remote deployment:
 
@@ -212,12 +411,14 @@ yarn claude-logs  # View Claude Desktop logs
 | **Security** | ✅ No exposed ports | ⚠️ Network port required |
 | **Simplicity** | ✅ No port management | ⚠️ Port conflicts possible |
 | **Claude Desktop** | ✅ Native support | ⚠️ Requires mcp-remote |
+| **Claude Code** | ✅ Native support | ✅ Native support |
+| **Open WebUI** | ❌ Not supported | ✅ Via Pipelines framework |
 | **Remote Access** | ❌ Local only | ✅ Can deploy remotely |
 | **Testing** | ⚠️ Requires MCP tools | ✅ Easy with curl/Postman |
 | **Multiple Clients** | ❌ One client at a time | ✅ Multiple concurrent clients |
 
 **Use stdio when:**
-- Using Claude Desktop locally
+- Using Claude Desktop or Claude Code locally
 - You want the best performance
 - You prefer simplicity
 
@@ -226,6 +427,7 @@ yarn claude-logs  # View Claude Desktop logs
 - You want easy testing/debugging
 - You need multiple concurrent clients
 - You're deploying to a server
+- Using Open WebUI or other web-based interfaces
 
 ## Debugging
 
@@ -280,6 +482,10 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 - 💬 [Searchcraft Discord](https://discord.gg/RQnGD63qWw)
 - 🧠 [Searchcraft Reddit](https://www.reddit.com/r/searchcraft/)
 - 🧪 [Searchcraft SDK on npm](https://www.npmjs.com/package/@searchcraft/react-sdk)
+
+## Issues and Feature Requests
+
+Visit https://github.com/searchcraft-inc/searchcraft-issues
 
 ## License
 

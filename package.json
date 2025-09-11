@@ -1,6 +1,6 @@
 {
     "name": "searchcraft-mcp-server",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Searchcraft's MCP Server",
     "type": "module",
     "main": "index.js",
@@ -13,6 +13,7 @@
         "clean": "rm -rf dist",
         "start": "node dist/server.js",
         "start:stdio": "node dist/stdio-server.js",
+        "typecheck": "tsc --noEmit",
         "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/stdio-server.js",
         "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log"
     },

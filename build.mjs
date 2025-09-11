@@ -1,4 +1,8 @@
 import * as esbuild from "esbuild";
+import { readFileSync } from "fs";
+
+// Read package.json to get version
+const packageJson = JSON.parse(readFileSync("package.json", "utf-8"));
 
 async function build() {
     try {
@@ -10,6 +14,9 @@ async function build() {
             format: "esm",
             sourcemap: true,
             tsconfig: "tsconfig.json",
+            define: {
+                "__PACKAGE_VERSION__": JSON.stringify(packageJson.version),
+            },
             external: [
                 "@modelcontextprotocol/*",
                 "express",
@@ -28,6 +35,9 @@ async function build() {
             format: "esm",
             sourcemap: true,
             tsconfig: "tsconfig.json",
+            define: {
+                "__PACKAGE_VERSION__": JSON.stringify(packageJson.version),
+            },
             external: [
                 "@modelcontextprotocol/*",
                 "zod",
