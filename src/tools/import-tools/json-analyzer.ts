@@ -67,7 +67,7 @@ export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): Js
     const weightMultipliers: Record<string, number> = {};
 
     for (const [fieldName, stats] of Object.entries(fieldStats)) {
-        const analysis = analyzeField(fieldName, stats, objects.length);
+        const analysis = analyzeField(fieldName, stats);
         fields[fieldName] = analysis;
 
         // Collect text fields for search_fields
@@ -135,9 +135,15 @@ function analyzeObject(obj: any, fieldStats: Record<string, any>, prefix: string
 /**
  * Analyze a single field and determine its Searchcraft configuration
  */
-function analyzeField(fieldName: string, stats: any, totalObjects: number): FieldAnalysis {
+function analyzeField(fieldName: string, stats: any): FieldAnalysis {
     const types = Array.from(stats.types);
-    const isRequired = stats.occurrences === totalObjects;
+
+    // Only make "id" and title-related fields required
+    const requiredFieldPatterns = ["id", "title", "name", "headline", "heading"];
+    const isRequired = requiredFieldPatterns.some(pattern =>
+        fieldName.toLowerCase().includes(pattern.toLowerCase())
+    );
+
     const isArray = stats.isArrayField;
 
     // Determine primary type (excluding null)
