@@ -323,7 +323,7 @@ function suggestWeight(fieldName: string): number {
         },
         {
             // Lower weight for description/content fields
-            patterns: ["description", "content", "body"],
+            patterns: ["description", "content", "body", "overview"],
             weight: 0.5
         },
         {
