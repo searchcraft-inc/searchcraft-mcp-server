@@ -12,11 +12,11 @@ import { analyzeJsonStructure } from "./json-analyzer.js";
 export const registerCreateIndexFromJson = (server: McpServer) => {
     /**
      * Tool: create_index_from_json
-     * Complete workflow: fetch/read JSON, analyze structure, generate schema, and create index
+     * Complete workflow: fetch/read JSON, analyze structure, generate schema, create index, and add documents
      */
     server.tool(
         "create_index_from_json",
-        "Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, and creates the index in one step.",
+        "Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, creates the index, and adds all the JSON data as documents to the index in one step.",
         {
             request: CreateIndexFromJsonSchema.describe(
                 "Complete request to create index from JSON source"
@@ -186,11 +186,41 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                     index: schema,
                 };
 
-                const response = await makeSearchcraftRequest(
+                const createResponse = await makeSearchcraftRequest(
                     endpoint,
                     "POST",
                     adminKey,
                     createRequest
+                );
+
+                // Step 5: Add documents to the index
+                debugLog("Step 5: Adding documents to the index");
+                let documentsToAdd: any[];
+
+                // Ensure jsonData is an array of documents
+                if (Array.isArray(jsonData)) {
+                    documentsToAdd = jsonData;
+                } else {
+                    // If it's a single object, wrap it in an array
+                    documentsToAdd = [jsonData];
+                }
+
+                const documentsEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents`;
+                const addDocumentsResponse = await makeSearchcraftRequest(
+                    documentsEndpoint,
+                    "POST",
+                    adminKey,
+                    documentsToAdd
+                );
+
+                // Step 6: Commit the documents
+                debugLog("Step 6: Committing documents to the index");
+                const commitEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/commit`;
+                const commitResponse = await makeSearchcraftRequest(
+                    commitEndpoint,
+                    "POST",
+                    adminKey,
+                    {}
                 );
 
                 return {
@@ -215,7 +245,15 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                                         name: index_name,
                                         schema,
                                     },
-                                    searchcraft_response: response,
+                                    documents_added: {
+                                        count: documentsToAdd.length,
+                                        sample: documentsToAdd.slice(0, 3), // Show first 3 documents as sample
+                                    },
+                                    searchcraft_responses: {
+                                        create_index: createResponse,
+                                        add_documents: addDocumentsResponse,
+                                        commit: commitResponse,
+                                    },
                                 }, null, 2),
                             },
                         },
