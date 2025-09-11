@@ -17,19 +17,17 @@ export const registerAnalyzeJsonFromFile = (server: McpServer) => {
         "analyze_json_from_file",
         "Read JSON data from a local file and analyze its structure to understand field types and patterns for Searchcraft index schema generation",
         {
-            source: z.literal("file").describe("Source type - must be 'file'"),
             path: z.string().describe("Local file path to the JSON data"),
             sample_size: z.number().int().positive().optional().default(10).describe("For arrays, number of items to analyze (default: 10)"),
         },
-        async ({ source, path, sample_size = 10 }) => {
+        async ({ path, sample_size = 10 }) => {
             debugLog("[Tool Call] analyze_json_from_file");
             try {
-                if (source !== "file") {
-                    return createErrorResponse("Source type must be 'file' for this tool");
-                }
+                // Trim whitespace from path
+                const trimmedPath = path.trim();
 
                 // Resolve and validate file path
-                const filePath = resolve(path);
+                const filePath = resolve(trimmedPath);
 
                 // Security check - ensure file path doesn't contain dangerous patterns
                 if (filePath.includes("..") || filePath.includes("~")) {
@@ -40,7 +38,7 @@ export const registerAnalyzeJsonFromFile = (server: McpServer) => {
                 try {
                     await access(filePath, constants.R_OK);
                 } catch {
-                    return createErrorResponse(`File not found or not readable: ${path}`);
+                    return createErrorResponse(`File not found or not readable: ${trimmedPath}`);
                 }
 
                 // Validate file extension
@@ -98,12 +96,12 @@ export const registerAnalyzeJsonFromFile = (server: McpServer) => {
                         {
                             type: "resource",
                             resource: {
-                                uri: `searchcraft://json-analysis-file/${encodeURIComponent(path)}/${Date.now()}`,
+                                uri: `searchcraft://json-analysis-file/${encodeURIComponent(trimmedPath)}/${Date.now()}`,
                                 mimeType: "application/json",
                                 text: JSON.stringify({
                                     source: {
                                         type: "file",
-                                        path: path,
+                                        path: trimmedPath,
                                         resolved_path: filePath,
                                         analyzed_at: new Date().toISOString(),
                                         file_size: fileContent.length,
