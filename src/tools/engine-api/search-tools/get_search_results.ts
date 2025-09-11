@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { debugLog, performSearchcraftRequest } from "../../../helpers.js";
-import type { SearchcraftQuery, SearchcraftQueryPart } from "../../types.js";
+import type { SearchcraftQuery, SearchcraftQueryPart } from "../../../types.js";
 
 /**
  * Tool: get_search_results

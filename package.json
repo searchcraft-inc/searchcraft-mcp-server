@@ -13,6 +13,7 @@
         "clean": "rm -rf dist",
         "start": "node dist/server.js",
         "start:stdio": "node dist/stdio-server.js",
+        "typecheck": "tsc --noEmit",
         "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/stdio-server.js",
         "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log"
     },
