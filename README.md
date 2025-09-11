@@ -98,8 +98,8 @@ These tools provide direct access to your Searchcraft cluster's core functionali
 
 | Tool Name | Description |
 |-----------|-------------|
-| get_measure_conversion | Get measurement conversion data with optional filtering and aggregation parameters. |
-| get_measure_summary | Get measurement summary data with optional filtering and aggregation parameters. |
+| get_measure_conversion | Get measurement conversion data with optional filtering and aggregation parameters. *requires Clickhouse if running locally |
+| get_measure_summary | Get measurement summary data with optional filtering and aggregation parameters. *requires Clickhouse if running locally|
 | get_search_results | Performs a search query using the Searchcraft API with support for fuzzy/exact matching, facets, and date ranges. |
 | get_prelim_search_data | Get schema fields and facet information for a search index to understand available fields for constructing queries. |
 | get_searchcraft_status | Get the current status of the Searchcraft search service. |
