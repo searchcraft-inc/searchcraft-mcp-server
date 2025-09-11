@@ -20,7 +20,13 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 
 ## Available Tools
 
-### Index Management
+The Searchcraft MCP Server provides two main categories of tools:
+
+### Engine API Tools
+
+These tools provide direct access to your Searchcraft cluster's core functionality for managing indexes, documents, federations, authentication, and search operations.
+
+#### Index Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -33,7 +39,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | patch_index | Make partial configuration changes to an index schema (search_fields, weight_multipliers, etc.). |
 | update_index | Replace the entire contents of an existing index with a new schema definition. |
 
-### Document Management
+#### Document Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -44,7 +50,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | delete_documents_by_query | Delete one or several documents from an index by query match. |
 | get_document_by_id | Get a single document from an index by its internal Searchcraft ID (_id). |
 
-### Federation Management
+#### Federation Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -56,7 +62,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | list_all_federations | Get a list of all federations in the Searchcraft instance. |
 | update_federation | Replace the current federation entity with an updated one. |
 
-### Authentication & Key Management
+#### Authentication & Key Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -70,7 +76,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | list_all_keys | Get a list of all authentication keys on the Searchcraft cluster. |
 | update_key | Update an existing authentication key with new configuration. |
 
-### Stopwords Management
+#### Stopwords Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -79,7 +85,7 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | delete_stopwords | Delete specific custom stopwords from an index. This only affects custom stopwords, not the default language dictionary. |
 | get_index_stopwords | Get all stopwords for an index, including both default language dictionary and custom stopwords. |
 
-### Synonyms Management
+#### Synonyms Management
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -88,14 +94,39 @@ The Searchcraft MCP Server provides a suite of tools for managing your Searchcra
 | delete_synonyms | Delete specific synonyms from an index by their keys. |
 | get_index_synonyms | Get all synonyms defined for an index. |
 
-### Search & Measurement
+#### Search & Analytics
 
 | Tool Name | Description |
 |-----------|-------------|
 | get_measure_conversion | Get measurement conversion data with optional filtering and aggregation parameters. |
 | get_measure_summary | Get measurement summary data with optional filtering and aggregation parameters. |
 | get_search_results | Performs a search query using the Searchcraft API with support for fuzzy/exact matching, facets, and date ranges. |
+| get_prelim_search_data | Get schema fields and facet information for a search index to understand available fields for constructing queries. |
 | get_searchcraft_status | Get the current status of the Searchcraft search service. |
+
+### Import Tools
+
+These tools provide workflows for importing JSON data and automatically generating Searchcraft schemas. Perfect for quickly setting up new indexes from existing data sources.
+
+| Tool Name | Description |
+|-----------|-------------|
+| analyze_json_from_file | Read JSON data from a local file and analyze its structure to understand field types and patterns for Searchcraft index schema generation. |
+| analyze_json_from_url | Fetch JSON data from a URL and analyze its structure to understand field types and patterns for Searchcraft index schema generation. |
+| generate_searchcraft_schema | Generate a complete Searchcraft index schema from analyzed JSON structure, with customizable options for search fields, weights, and other index settings. |
+| create_index_from_json | Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, and creates the index in one step. |
+
+#### Import Tools Workflow
+
+The import tools are designed to work together in a streamlined workflow:
+
+1. **Analyze** → Use `analyze_json_from_file` or `analyze_json_from_url` to examine your JSON data structure
+2. **Generate** → Use `generate_searchcraft_schema` to create a customized Searchcraft schema from the analysis
+3. **Create** → Use the Engine API `create_index` tool to create the index with your generated schema
+4. **Import** → Use `add_documents` to populate your new index with data
+
+**Or use the all-in-one approach:**
+
+- **One-Step** → Use `create_index_from_json` to analyze, generate schema, and create the index all in one command
 
 ## Getting Started
 
