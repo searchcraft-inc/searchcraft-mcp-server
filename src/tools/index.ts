@@ -7,3 +7,4 @@ export * from "./measure-tools/index.js";
 export * from "./federation-tools/index.js";
 export * from "./stopword-tools/index.js";
 export * from "./synonym-tools/index.js";
+export * from "./schema-tools/index.js";
