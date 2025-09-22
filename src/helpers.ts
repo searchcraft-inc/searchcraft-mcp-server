@@ -63,26 +63,43 @@ export const createErrorResponse = (message: string) => ({
     isError: true,
 });
 
+// Define log level hierarchy (lower numbers = higher priority)
+const LOG_LEVELS = {
+    ERROR: 0,
+    WARN: 1,
+    INFO: 2,
+    LOG: 3,
+} as const;
+
+type LogLevel = keyof typeof LOG_LEVELS;
+
+function getConfiguredLogLevel(): LogLevel {
+    const envLevel = process.env.LOG_LEVEL?.toUpperCase() as LogLevel;
+    return envLevel && envLevel in LOG_LEVELS ? envLevel : "LOG";
+}
+
+function shouldLog(messageLevel: LogLevel, configuredLevel: LogLevel): boolean {
+    return LOG_LEVELS[messageLevel] <= LOG_LEVELS[configuredLevel];
+}
+
 export function debugLog(
     message: string,
-    level: "LOG" | "INFO" | "WARN" | "ERROR" = "LOG",
+    level: LogLevel = "LOG",
 ) {
+    // Check if debugging is enabled at all
     if (!process.env.DEBUG || process.env.DEBUG.toLowerCase() !== "true") {
         return;
     }
 
-    switch (level) {
-        case "LOG":
-            console.log(message);
-            break;
-        case "INFO":
-            console.info(message);
-            break;
-        case "WARN":
-            console.warn(message);
-            break;
-        case "ERROR":
-            console.error(message);
-            break;
+    // Check if this message level should be logged based on configured level
+    const configuredLevel = getConfiguredLogLevel();
+    if (!shouldLog(level, configuredLevel)) {
+        return;
     }
+
+    // Use stderr for all debug output to avoid interfering with MCP JSON-RPC on stdout
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] [${level}] ${message}`;
+
+    process.stderr.write(logMessage + '\n');
 }

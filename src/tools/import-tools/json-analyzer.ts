@@ -67,7 +67,7 @@ export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): Js
     const weightMultipliers: Record<string, number> = {};
 
     for (const [fieldName, stats] of Object.entries(fieldStats)) {
-        const analysis = analyzeField(fieldName, stats, objects.length);
+        const analysis = analyzeField(fieldName, stats);
         fields[fieldName] = analysis;
 
         // Collect text fields for search_fields
@@ -135,9 +135,15 @@ function analyzeObject(obj: any, fieldStats: Record<string, any>, prefix: string
 /**
  * Analyze a single field and determine its Searchcraft configuration
  */
-function analyzeField(fieldName: string, stats: any, totalObjects: number): FieldAnalysis {
+function analyzeField(fieldName: string, stats: any): FieldAnalysis {
     const types = Array.from(stats.types);
-    const isRequired = stats.occurrences === totalObjects;
+
+    // Only make "id" and title-related fields required
+    const requiredFieldPatterns = ["id", "title", "name", "headline", "heading"];
+    const isRequired = requiredFieldPatterns.some(pattern =>
+        fieldName.toLowerCase().includes(pattern.toLowerCase())
+    );
+
     const isArray = stats.isArrayField;
 
     // Determine primary type (excluding null)
@@ -276,15 +282,33 @@ function suggestFieldConfig(
             break;
     }
 
-    // Special handling for ID fields
-    if (fieldName.toLowerCase().includes("id")) {
-        config.indexed = false; // IDs usually don't need to be searchable
-        config.fast = false;
-    }
+    // Define field name patterns for special handling
+    const fieldPatterns = [
+        {
+            // ID fields - usually don't need to be searchable
+            patterns: ["id"],
+            config: { indexed: false, fast: false }
+        },
+        {
+            // URL/Link fields - usually don't need to be searchable
+            patterns: ["url", "link"],
+            config: { indexed: false }
+        },
+        {
+            // Media fields - usually don't need to be searchable
+            patterns: ["image", "thumbnail", "photo", "video", "path", "poster"],
+            config: { indexed: false }
+        }
+    ];
 
-    // Special handling for URL fields
-    if (fieldName.toLowerCase().includes("url") || fieldName.toLowerCase().includes("link")) {
-        config.indexed = false; // URLs usually don't need to be searchable
+    const name = fieldName.toLowerCase();
+
+    // Apply special configurations based on field name patterns
+    for (const { patterns, config: patternConfig } of fieldPatterns) {
+        if (patterns.some(pattern => name.includes(pattern))) {
+            Object.assign(config, patternConfig);
+            break; // Apply only the first matching pattern
+        }
     }
 
     return config;
@@ -296,19 +320,34 @@ function suggestFieldConfig(
 function suggestWeight(fieldName: string): number {
     const name = fieldName.toLowerCase();
 
-    // Higher weight for title-like fields
-    if (name.includes("title") || name.includes("name") || name.includes("heading")) {
-        return 2.0;
-    }
+    // Define field name patterns with their corresponding weights
+    const weightPatterns = [
+        {
+            // Higher weight for title-like fields
+            patterns: ["title", "name", "headline", "heading"],
+            weight: 2.0
+        },
+        {
+            // Lower weight for description/content fields
+            patterns: ["description", "content", "body", "overview"],
+            weight: 0.5
+        },
+        {
+            // Lower weight for summary/excerpt fields
+            patterns: ["summary", "excerpt", "snippet", "subhead", "subsubheadline"],
+            weight: 1.0
+        },
+        {
+            patterns: ["tags", "keywords"],
+            weight: 0.8
+        }
+    ];
 
-    // Lower weight for description/content fields
-    if (name.includes("description") || name.includes("content") || name.includes("body")) {
-        return 0.5;
-    }
-
-    // Lower weight for summary/excerpt fields
-    if (name.includes("summary") || name.includes("excerpt") || name.includes("snippet")) {
-        return 0.8;
+    // Check each pattern group
+    for (const { patterns, weight } of weightPatterns) {
+        if (patterns.some(pattern => name.includes(pattern))) {
+            return weight;
+        }
     }
 
     return 1.0; // Default weight

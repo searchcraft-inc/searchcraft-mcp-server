@@ -15,21 +15,19 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
         "analyze_json_from_url",
         "Fetch JSON data from a URL and analyze its structure to understand field types and patterns for Searchcraft index schema generation",
         {
-            source: z.literal("url").describe("Source type - must be 'url'"),
             path: z.string().url().describe("URL to fetch JSON data from"),
             sample_size: z.number().int().positive().optional().default(10).describe("For arrays, number of items to analyze (default: 10)"),
         },
-        async ({ source, path, sample_size = 10 }) => {
+        async ({ path, sample_size = 10 }) => {
             debugLog("[Tool Call] analyze_json_from_url");
             try {
-                if (source !== "url") {
-                    return createErrorResponse("Source type must be 'url' for this tool");
-                }
+                // Trim whitespace from path
+                const trimmedPath = path.trim();
 
                 // Validate URL format
                 let url: URL;
                 try {
-                    url = new URL(path);
+                    url = new URL(trimmedPath);
                 } catch {
                     return createErrorResponse("Invalid URL format provided");
                 }
@@ -39,10 +37,10 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
                     return createErrorResponse("Only HTTP and HTTPS URLs are supported");
                 }
 
-                debugLog(`Fetching JSON from URL: ${path}`);
+                debugLog(`Fetching JSON from URL: ${trimmedPath}`);
 
                 // Fetch JSON data
-                const response = await fetch(path, {
+                const response = await fetch(trimmedPath, {
                     headers: {
                         "Accept": "application/json",
                         "User-Agent": "Searchcraft-MCP-Server/1.0",
@@ -81,12 +79,12 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
                         {
                             type: "resource",
                             resource: {
-                                uri: `searchcraft://json-analysis-url/${encodeURIComponent(path)}/${Date.now()}`,
+                                uri: `searchcraft://json-analysis-url/${encodeURIComponent(trimmedPath)}/${Date.now()}`,
                                 mimeType: "application/json",
                                 text: JSON.stringify({
                                     source: {
                                         type: "url",
-                                        url: path,
+                                        url: trimmedPath,
                                         fetched_at: new Date().toISOString(),
                                         content_type: contentType,
                                         response_size: jsonText.length,

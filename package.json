@@ -15,6 +15,7 @@
         "start:stdio": "node dist/stdio-server.js",
         "typecheck": "tsc --noEmit",
         "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/stdio-server.js",
+        "inspect:rest": "yarn build && (yarn start &) && sleep 3 && npx @modelcontextprotocol/inspector --transport http --server-url http://localhost:3100/mcp",
         "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log"
     },
     "bin": {
