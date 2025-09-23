@@ -22,6 +22,34 @@ export interface JsonStructureAnalysis {
 }
 
 /**
+ * Recursively finds all arrays in an object with their paths and depths
+ */
+function findArraysInObject(obj: any, path: string = "", depth: number = 0, maxDepth: number = 3): Array<{path: string, array: any[], depth: number, length: number}> {
+    const arrays: Array<{path: string, array: any[], depth: number, length: number}> = [];
+
+    if (depth > maxDepth) return arrays;
+
+    if (typeof obj === "object" && obj !== null) {
+        for (const [key, value] of Object.entries(obj)) {
+            const currentPath = path ? `${path}.${key}` : key;
+
+            if (Array.isArray(value)) {
+                arrays.push({
+                    path: currentPath,
+                    array: value,
+                    depth,
+                    length: value.length
+                });
+            } else if (typeof value === "object" && value !== null) {
+                arrays.push(...findArraysInObject(value, currentPath, depth + 1, maxDepth));
+            }
+        }
+    }
+
+    return arrays;
+}
+
+/**
  * Analyzes JSON structure and provides recommendations for Searchcraft schema
  */
 export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): JsonStructureAnalysis {
@@ -33,7 +61,24 @@ export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): Js
     if (Array.isArray(jsonData)) {
         objects = jsonData.slice(0, sampleSize);
     } else if (typeof jsonData === "object" && jsonData !== null) {
-        objects = [jsonData];
+        // Find all arrays in the object, prioritizing those closest to root and largest in size
+        const foundArrays = findArraysInObject(jsonData);
+
+        if (foundArrays.length > 0) {
+            // Sort by depth (ascending) then by length (descending)
+            // This prioritizes arrays closer to root, then larger arrays
+            foundArrays.sort((a, b) => {
+                if (a.depth !== b.depth) return a.depth - b.depth;
+                return b.length - a.length;
+            });
+
+            const bestArray = foundArrays[0];
+            debugLog(`Found ${foundArrays.length} array(s). Using: "${bestArray.path}" (depth: ${bestArray.depth}, length: ${bestArray.length})`);
+            objects = bestArray.array.slice(0, sampleSize);
+        } else {
+            // Single object
+            objects = [jsonData];
+        }
     } else {
         throw new Error("JSON data must be an object or array of objects");
     }
