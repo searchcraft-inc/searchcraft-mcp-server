@@ -26,7 +26,7 @@ Here is a sample prompt that could be used once Claude is connected to the Searc
 I'd like to create a product search application using the create_vite_app tool.
 
 Please use this JSON dataset https://dummyjson.com/products
-First use the Searchcraft create_index_from_json tool to create the index and add the documents
+First use the Searchcraft create_index_from_json tool to create the index and add the documents.
 
 Then create an API read key for the vite app using the create_key tool.
 
@@ -168,7 +168,7 @@ The app generation tools provide an end-to-end solution for creating search appl
 
 ### Using create_index_from_json
 
-The `create_index_from_json` tool provides a complete workflow to create a Searchcraft index from JSON data in a single command. This is perfect for quickly setting up search indexes from existing datasets.
+The `create_index_from_json` tool provides a complete workflow to create a Searchcraft index from JSON data in a single command. This is perfect for quickly setting up search indexes from existing datasets. Note, if you know the language of the data you are importing you should specify it with the `language` parameter (use the [ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) two letter code for the language)
 
 #### Parameters
 
