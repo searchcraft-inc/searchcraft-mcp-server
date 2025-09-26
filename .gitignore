@@ -9,6 +9,7 @@ dist/
 build/
 .env
 demos/*
+apps/*
 
 # Compiled Java class files
 *.class

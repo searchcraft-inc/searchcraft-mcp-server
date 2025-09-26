@@ -43,6 +43,16 @@ export const makeSearchcraftRequest = async (
 
     if (!response.ok) {
         const errorText = await response.text();
+
+        // Enhanced error logging for document validation issues
+        if (endpoint.includes('/documents') && errorText.includes('validation')) {
+            debugLog(`Searchcraft document validation error:`);
+            debugLog(`  Status: ${response.status} ${response.statusText}`);
+            debugLog(`  Response: ${errorText}`);
+            debugLog(`  Request endpoint: ${endpoint}`);
+            debugLog(`  Request method: ${method}`);
+        }
+
         throw new Error(
             `HTTP ${response.status}: ${response.statusText} ${errorText}`,
         );
@@ -103,3 +113,50 @@ export function debugLog(
 
     process.stderr.write(logMessage + '\n');
 }
+
+/**
+ * Prepares documents for Searchcraft by ensuring f64 fields have proper float representation
+ * This addresses the issue where integer values like 1 cause validation errors
+ * when sent to Searchcraft for fields marked as f64 in the schema.
+ */
+export const prepareDocumentsForSearchcraft = (documents: any[], schema: Record<string, any>): any[] => {
+    // Find f64 fields in the schema
+    const f64Fields = Object.entries(schema)
+        .filter(([_, config]) => config?.type === "f64")
+        .map(([fieldName, _]) => fieldName);
+
+    if (f64Fields.length === 0) {
+        return documents; // No f64 fields, return as-is
+    }
+
+    return documents.map(doc => {
+        const prepared = { ...doc };
+
+        f64Fields.forEach(fieldName => {
+            const value = prepared[fieldName];
+            if (typeof value === "number" && Number.isInteger(value)) {
+                // Convert integer to a value that will serialize with decimal point
+                // We use a custom object with toJSON method to force .0 in serialization
+                prepared[fieldName] = {
+                    valueOf: () => value,
+                    toJSON: () => `${value}.0`,
+                    toString: () => `${value}.0`
+                };
+            } else if (Array.isArray(value)) {
+                // Handle arrays of numbers
+                prepared[fieldName] = value.map(v => {
+                    if (typeof v === "number" && Number.isInteger(v)) {
+                        return {
+                            valueOf: () => v,
+                            toJSON: () => `${v}.0`,
+                            toString: () => `${v}.0`
+                        };
+                    }
+                    return v;
+                });
+            }
+        });
+
+        return prepared;
+    });
+};

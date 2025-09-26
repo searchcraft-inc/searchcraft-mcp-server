@@ -22,27 +22,145 @@ export interface JsonStructureAnalysis {
 }
 
 /**
- * Analyzes JSON structure and provides recommendations for Searchcraft schema
+ * Recursively finds all arrays in an object with their paths and depths
  */
-export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): JsonStructureAnalysis {
-    debugLog(`Starting JSON structure analysis with sample size: ${sampleSize}`);
+export function findArraysInObject(obj: any, path: string = "", depth: number = 0, maxDepth: number = 3): Array<{path: string, array: any[], depth: number, length: number}> {
+    const arrays: Array<{path: string, array: any[], depth: number, length: number}> = [];
 
-    // Normalize input to array of objects
-    let objects: any[] = [];
+    if (depth > maxDepth) return arrays;
 
+    if (typeof obj === "object" && obj !== null) {
+        for (const [key, value] of Object.entries(obj)) {
+            const currentPath = path ? `${path}.${key}` : key;
+
+            if (Array.isArray(value)) {
+                arrays.push({
+                    path: currentPath,
+                    array: value,
+                    depth,
+                    length: value.length
+                });
+            } else if (typeof value === "object" && value !== null) {
+                arrays.push(...findArraysInObject(value, currentPath, depth + 1, maxDepth));
+            }
+        }
+    }
+
+    return arrays;
+}
+
+/**
+ * Flattens nested objects and removes complex nested structures that Searchcraft can't handle
+ */
+export function flattenDocumentForSearchcraft(doc: any): any {
+    const flattened: any = {};
+
+    function flattenObject(obj: any, prefix: string = ""): void {
+        for (const [key, value] of Object.entries(obj)) {
+            const fieldName = prefix ? `${prefix}.${key}` : key;
+
+            if (value === null || value === undefined) {
+                // Skip null/undefined values to avoid validation errors
+                continue;
+            } else if (Array.isArray(value)) {
+                // Handle arrays
+                if (value.length > 0) {
+                    const firstItem = value[0];
+                    if (typeof firstItem === "object" && firstItem !== null) {
+                        // Array of objects - skip for now
+                        // Could be flattened in the future if needed
+                        continue;
+                    } else {
+                        // Array of primitives - clean and keep, with optional type conversion
+                        const cleanArray = value.filter(v => v !== null && v !== undefined);
+                        if (cleanArray.length > 0) {
+                            // Keep array as-is - we'll handle f64 conversion at JSON serialization time
+                            flattened[fieldName] = cleanArray;
+                        }
+                    }
+                } else {
+                    // Empty array - skip
+                    continue;
+                }
+            } else if (typeof value === "object") {
+                // Nested object - flatten it
+                flattenObject(value, fieldName);
+            } else {
+                // Primitive value - validate and apply optional type conversion based on schema
+                if (typeof value === "number") {
+                    // Ensure numbers are valid (not NaN or Infinity)
+                    if (isFinite(value) && !isNaN(value)) {
+                        // Keep the value as-is - we'll handle f64 conversion at JSON serialization time
+                        flattened[fieldName] = value;
+                    }
+                } else if (typeof value === "string") {
+                    // Keep non-empty strings
+                    if (value.trim().length > 0) {
+                        flattened[fieldName] = value;
+                    }
+                } else if (typeof value === "boolean") {
+                    // Keep boolean values
+                    flattened[fieldName] = value;
+                } else {
+                    // For other types, convert to string if possible
+                    const stringValue = String(value);
+                    if (stringValue && stringValue !== "undefined" && stringValue !== "null") {
+                        flattened[fieldName] = stringValue;
+                    }
+                }
+            }
+        }
+    }
+
+    flattenObject(doc);
+    return flattened;
+}
+
+
+/**
+ * Extracts the best array from JSON data using the same logic as analyzeJsonStructure
+ */
+export function extractContentArray(jsonData: any): any[] {
     if (Array.isArray(jsonData)) {
-        objects = jsonData.slice(0, sampleSize);
+        return jsonData;
     } else if (typeof jsonData === "object" && jsonData !== null) {
-        objects = [jsonData];
+        // Find all arrays in the object, prioritizing those closest to root and largest in size
+        const foundArrays = findArraysInObject(jsonData);
+
+        if (foundArrays.length > 0) {
+            // Sort by depth (ascending) then by length (descending)
+            foundArrays.sort((a, b) => {
+                if (a.depth !== b.depth) return a.depth - b.depth;
+                return b.length - a.length;
+            });
+
+            const bestLikelyArray = foundArrays[0];
+
+            return bestLikelyArray.array;
+        } else {
+            // Single object
+            return [jsonData];
+        }
     } else {
         throw new Error("JSON data must be an object or array of objects");
     }
+}
+
+/**
+ * Analyzes JSON structure and provides recommendations for Searchcraft schema
+ */
+export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): JsonStructureAnalysis {
+    //debugLog(`Starting JSON structure analysis with sample size: ${sampleSize}`);
+
+    // Extract the best array and take a sample for analysis
+    const allObjects = extractContentArray(jsonData);
+    const objects = allObjects.slice(0, sampleSize);
 
     if (objects.length === 0) {
         throw new Error("No objects to analyze");
     }
 
-    debugLog(`Analyzing ${objects.length} objects`);
+    //debugLog(`Analyzing ${objects.length} objects`);
 
     // Collect all field information
     const fieldStats: Record<string, {
@@ -180,7 +298,23 @@ function determineSearchcraftType(
             return "bool";
 
         case "number":
-            // Check if all numbers are integers
+            // Fields that commonly contain decimals should always be f64
+            const decimalFieldPatterns = [
+                "percentage", "percent", "rate", "ratio", "price", "cost", "amount",
+                "discount", "height", "width", "depth", "discountPercentage",
+                "dimension", "size", "length", "distance", "temperature", "lat", "lng",
+                "latitude", "longitude", "coord"
+            ];
+
+            const isLikelyDecimalField = decimalFieldPatterns.some(pattern =>
+                fieldName.toLowerCase().includes(pattern.toLowerCase())
+            );
+
+            if (isLikelyDecimalField) {
+                return "f64";
+            }
+
+            // Check if all numbers are integers for other fields
             const allIntegers = sampleValues.every(v =>
                 typeof v === "number" && Number.isInteger(v) && v >= 0
             );
@@ -334,7 +468,7 @@ function suggestWeight(fieldName: string): number {
         },
         {
             // Lower weight for summary/excerpt fields
-            patterns: ["summary", "excerpt", "snippet", "subhead", "subsubheadline"],
+            patterns: ["summary", "excerpt", "snippet", "subhead", "subheadline"],
             weight: 1.0
         },
         {
