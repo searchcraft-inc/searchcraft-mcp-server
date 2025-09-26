@@ -259,15 +259,15 @@ export const registerCreateViteApp = (server: McpServer) => {
 
                 // Step 3: Setup app directory
                 debugLog("Step 3: Setting up app directory");
-                const demosDir = join(projectRoot, "demos");
-                const appDir = join(demosDir, app_name);
+                const appsRoot = join(projectRoot, "apps");
+                const appDir = join(appsRoot, app_name);
 
-                debugLog(`Creating demos directory at: ${demosDir}`);
+                debugLog(`Creating apps directory at: ${appsRoot}`);
                 try {
-                    await mkdir(demosDir, { recursive: true });
-                    debugLog(`Successfully created demos directory`);
+                    await mkdir(appsRoot, { recursive: true });
+                    debugLog(`Successfully created apps directory`);
                 } catch (error) {
-                    return createErrorResponse(`Failed to create demos directory at ${demosDir}: ${error}`);
+                    return createErrorResponse(`Failed to create apps directory at ${appsRoot}: ${error}`);
                 }
 
                 try {
@@ -284,7 +284,7 @@ export const registerCreateViteApp = (server: McpServer) => {
                     await execAsync(
                         `/usr/bin/git clone --depth 1 https://github.com/searchcraft-inc/vite-react-searchcraft-template.git ${app_name}`,
                         {
-                            cwd: demosDir,
+                            cwd: appsRoot,
                             timeout: 60000 // 1 minute timeout
                         }
                     );
