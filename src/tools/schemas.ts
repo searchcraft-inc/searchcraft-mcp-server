@@ -283,3 +283,15 @@ export const CreateIndexFromJsonSchema = z.object({
     time_decay_field: z.string().optional().describe("Field to use for time decay"),
     override_if_exists: z.boolean().optional().default(false).describe("Whether to override existing index"),
 });
+
+export const CreateViteAppSchema = z.object({
+    data_source: z.enum(["url", "file"]).describe("Source type: URL or local file path"),
+    data_path: z.string().describe("URL or file path to the JSON data"),
+    app_name: z.string().describe("Name for the generated app (will be used for directory name)"),
+    VITE_ENDPOINT_URL: z.string().describe("The Searchcraft endpoint URL"),
+    VITE_INDEX_NAME: z.string().describe("The Searchcraft index name"),
+    VITE_READ_KEY: z.string().describe("The Searchcraft read key"),
+    sample_size: z.number().int().positive().optional().default(50).describe("For arrays, number of items to analyze"),
+    search_fields: z.array(z.string()).optional().describe("Override default search fields"),
+    weight_multipliers: z.record(z.number().min(0.0).max(10.0)).optional().describe("Override default weight multipliers"),
+});

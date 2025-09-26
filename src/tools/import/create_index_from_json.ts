@@ -5,9 +5,10 @@ import {
     createErrorResponse,
     debugLog,
     makeSearchcraftRequest,
+    prepareDocumentsForSearchcraft,
 } from "../../helpers.js";
 import { CreateIndexFromJsonSchema } from "../schemas.js";
-import { analyzeJsonStructure } from "./json-analyzer.js";
+import { analyzeJsonStructure, extractContentArray, flattenDocumentForSearchcraft } from "./json-analyzer.js";
 
 export const registerCreateIndexFromJson = (server: McpServer) => {
     /**
@@ -29,7 +30,7 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                     source,
                     path,
                     index_name,
-                    sample_size = 10,
+                    sample_size = 50,
                     search_fields,
                     weight_multipliers,
                     language,
@@ -55,173 +56,233 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                 let jsonData: any;
                 let sourceInfo: any = {};
 
-                if (source === "url") {
-                    // Validate URL
-                    let url: URL;
-                    try {
-                        url = new URL(path);
-                    } catch {
-                        return createErrorResponse("Invalid URL format provided");
+                try {
+                    if (source === "url") {
+                        // Validate URL
+                        let url: URL;
+                        try {
+                            url = new URL(path);
+                        } catch {
+                            return createErrorResponse("Invalid URL format provided");
+                        }
+
+                        if (!["http:", "https:"].includes(url.protocol)) {
+                            return createErrorResponse("Only HTTP and HTTPS URLs are supported");
+                        }
+
+                        // Fetch from URL
+                        const response = await fetch(path, {
+                            headers: {
+                                "Accept": "application/json",
+                                "User-Agent": "Searchcraft-MCP-Server/1.0",
+                            },
+                            signal: AbortSignal.timeout(30000),
+                        });
+
+                        if (!response.ok) {
+                            return createErrorResponse(
+                                `Failed to fetch URL: ${response.status} ${response.statusText}`
+                            );
+                        }
+
+                        const jsonText = await response.text();
+                        jsonData = JSON.parse(jsonText);
+                        sourceInfo = {
+                            type: "url",
+                            url: path,
+                            content_type: response.headers.get("content-type"),
+                            response_size: jsonText.length,
+                        };
+
+                    } else if (source === "file") {
+                        // Validate and read file
+                        const filePath = resolve(path);
+
+                        if (filePath.includes("..") || filePath.includes("~")) {
+                            return createErrorResponse("File path contains potentially unsafe characters");
+                        }
+
+                        try {
+                            await access(filePath, constants.R_OK);
+                        } catch {
+                            return createErrorResponse(`File not found or not readable: ${path}`);
+                        }
+
+                        const fileContent = await readFile(filePath, "utf-8");
+                        const ext = extname(filePath).toLowerCase();
+
+                        // Handle JSONL/NDJSON files
+                        if ([".jsonl", ".ndjson"].includes(ext)) {
+                            const lines = fileContent.trim().split("\n");
+                            jsonData = lines
+                                .filter(line => line.trim().length > 0)
+                                .map(line => JSON.parse(line));
+                        } else {
+                            jsonData = JSON.parse(fileContent);
+                        }
+
+                        sourceInfo = {
+                            type: "file",
+                            path: path,
+                            resolved_path: filePath,
+                            file_size: fileContent.length,
+                            file_extension: ext,
+                        };
                     }
-
-                    if (!["http:", "https:"].includes(url.protocol)) {
-                        return createErrorResponse("Only HTTP and HTTPS URLs are supported");
-                    }
-
-                    // Fetch from URL
-                    const response = await fetch(path, {
-                        headers: {
-                            "Accept": "application/json",
-                            "User-Agent": "Searchcraft-MCP-Server/1.0",
-                        },
-                        signal: AbortSignal.timeout(30000),
-                    });
-
-                    if (!response.ok) {
-                        return createErrorResponse(
-                            `Failed to fetch URL: ${response.status} ${response.statusText}`
-                        );
-                    }
-
-                    const jsonText = await response.text();
-                    jsonData = JSON.parse(jsonText);
-                    sourceInfo = {
-                        type: "url",
-                        url: path,
-                        content_type: response.headers.get("content-type"),
-                        response_size: jsonText.length,
-                    };
-
-                } else if (source === "file") {
-                    // Validate and read file
-                    const filePath = resolve(path);
-
-                    if (filePath.includes("..") || filePath.includes("~")) {
-                        return createErrorResponse("File path contains potentially unsafe characters");
-                    }
-
-                    try {
-                        await access(filePath, constants.R_OK);
-                    } catch {
-                        return createErrorResponse(`File not found or not readable: ${path}`);
-                    }
-
-                    const fileContent = await readFile(filePath, "utf-8");
-                    const ext = extname(filePath).toLowerCase();
-
-                    // Handle JSONL/NDJSON files
-                    if ([".jsonl", ".ndjson"].includes(ext)) {
-                        const lines = fileContent.trim().split("\n");
-                        jsonData = lines
-                            .filter(line => line.trim().length > 0)
-                            .map(line => JSON.parse(line));
-                    } else {
-                        jsonData = JSON.parse(fileContent);
-                    }
-
-                    sourceInfo = {
-                        type: "file",
-                        path: path,
-                        resolved_path: filePath,
-                        file_size: fileContent.length,
-                        file_extension: ext,
-                    };
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                    throw new Error(`Failed to fetch/read JSON data: ${errorMessage}`);
                 }
 
-                // Step 2: Analyze JSON structure
+                // Step 2: Analyze JSON structure (using flattened documents)
                 debugLog("Step 2: Analyzing JSON structure");
-                const analysis = analyzeJsonStructure(jsonData, sample_size);
+                let analysis: any;
+                try {
+                    // First extract the raw documents
+                    const rawDocuments = extractContentArray(jsonData);
+
+                    // Flatten a sample of documents for analysis
+                    const sampleDocuments = rawDocuments.slice(0, sample_size);
+                    const flattenedSample = sampleDocuments.map(doc => flattenDocumentForSearchcraft(doc));
+
+                    // Create a synthetic JSON structure with the flattened documents
+                    const flattenedJsonData = { documents: flattenedSample };
+
+                    analysis = analyzeJsonStructure(flattenedJsonData, sample_size);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                    throw new Error(`Failed to analyze JSON structure: ${errorMessage}`);
+                }
 
                 // Step 3: Generate Searchcraft schema
                 debugLog("Step 3: Generating Searchcraft schema");
-                const fields: Record<string, any> = {};
+                let schema: any;
+                let fields: Record<string, any> = {};
+                let finalSearchFields: string[] = [];
+                let finalWeightMultipliers: any = {};
 
-                for (const [fieldName, fieldAnalysis] of Object.entries(analysis.fields)) {
-                    if (fieldName.includes(".")) continue; // Skip nested fields
+                try {
+                    for (const [fieldName, fieldAnalysis] of Object.entries(analysis.fields)) {
+                        // Include all fields, including flattened ones with dots
+                        // This ensures schema matches the flattened document structure
 
-                    const fieldConfig: any = {
-                        type: fieldAnalysis.searchcraft_type,
-                        stored: fieldAnalysis.suggested_config.stored,
+                        const fieldInfo = fieldAnalysis as any; // Type assertion for analysis result
+                        const fieldConfig: any = {
+                            type: fieldInfo.searchcraft_type,
+                            stored: fieldInfo.suggested_config.stored,
+                        };
+
+                        if (fieldInfo.is_required) fieldConfig.required = true;
+                        if (!fieldInfo.suggested_config.indexed) fieldConfig.indexed = false;
+                        if (fieldInfo.suggested_config.fast) fieldConfig.fast = true;
+                        if (fieldInfo.suggested_config.multi) fieldConfig.multi = true;
+
+                        fields[fieldName] = fieldConfig;
+                    }
+
+                    // Determine weight multipliers first
+                    finalWeightMultipliers = weight_multipliers ||
+                        Object.fromEntries(
+                            Object.entries(analysis.suggested_weight_multipliers)
+                                .filter(([fieldName]) => fields[fieldName]?.type === "text")
+                        );
+
+                    // Search fields are always derived from weight_multipliers (search_fields parameter is ignored)
+                    finalSearchFields = Object.keys(finalWeightMultipliers);
+
+                    // Build schema
+                    schema = {
+                        name: index_name,
+                        search_fields: finalSearchFields,
+                        fields,
                     };
 
-                    if (fieldAnalysis.is_required) fieldConfig.required = true;
-                    if (!fieldAnalysis.suggested_config.indexed) fieldConfig.indexed = false;
-                    if (fieldAnalysis.suggested_config.fast) fieldConfig.fast = true;
-                    if (fieldAnalysis.suggested_config.multi) fieldConfig.multi = true;
+                    if (Object.keys(finalWeightMultipliers).length > 0) {
+                        schema.weight_multipliers = finalWeightMultipliers;
+                    }
+                    if (language) schema.language = language;
+                    if (auto_commit_delay !== undefined) schema.auto_commit_delay = auto_commit_delay;
+                    if (exclude_stop_words !== undefined) schema.exclude_stop_words = exclude_stop_words;
+                    if (time_decay_field) schema.time_decay_field = time_decay_field;
 
-                    fields[fieldName] = fieldConfig;
+                    // Debug: Log the schema being created
+                    //debugLog(`Generated schema: ${JSON.stringify(schema, null, 2)}`);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                    throw new Error(`Failed to generate Searchcraft schema: ${errorMessage}`);
                 }
-
-                // Determine search fields and weights
-                const finalSearchFields = search_fields || analysis.suggested_search_fields.filter(
-                    fieldName => fields[fieldName]?.type === "text"
-                );
-
-                const finalWeightMultipliers = weight_multipliers ||
-                    Object.fromEntries(
-                        Object.entries(analysis.suggested_weight_multipliers)
-                            .filter(([fieldName]) => finalSearchFields.includes(fieldName))
-                    );
-
-                // Build schema
-                const schema: any = {
-                    name: index_name,
-                    search_fields: finalSearchFields,
-                    fields,
-                };
-
-                if (Object.keys(finalWeightMultipliers).length > 0) {
-                    schema.weight_multipliers = finalWeightMultipliers;
-                }
-                if (language) schema.language = language;
-                if (auto_commit_delay !== undefined) schema.auto_commit_delay = auto_commit_delay;
-                if (exclude_stop_words !== undefined) schema.exclude_stop_words = exclude_stop_words;
-                if (time_decay_field) schema.time_decay_field = time_decay_field;
 
                 // Step 4: Create index
                 debugLog("Step 4: Creating Searchcraft index");
-                const endpoint = `${endpointUrl.replace(/\/$/, "")}/index`;
-                const createRequest = {
-                    override_if_exists,
-                    index: schema,
-                };
+                let createResponse: any;
+                try {
+                    const endpoint = `${endpointUrl.replace(/\/$/, "")}/index`;
+                    const createRequest = {
+                        override_if_exists,
+                        index: schema,
+                    };
 
-                const createResponse = await makeSearchcraftRequest(
-                    endpoint,
-                    "POST",
-                    adminKey,
-                    createRequest
-                );
+                    createResponse = await makeSearchcraftRequest(
+                        endpoint,
+                        "POST",
+                        adminKey,
+                        createRequest
+                    );
+
+                    //debugLog(`Index created successfully. Response: ${JSON.stringify(createResponse, null, 2)}`);
+
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                    throw new Error(`Failed to create Searchcraft index: ${errorMessage}`);
+                }
 
                 // Step 5: Add documents to the index
                 debugLog("Step 5: Adding documents to the index");
-                let documentsToAdd: any[];
+                let documentsToAdd: any[] = [];
+                let addDocumentsResponse: any;
 
-                // Ensure jsonData is an array of documents
-                if (Array.isArray(jsonData)) {
-                    documentsToAdd = jsonData;
-                } else {
-                    // If it's a single object, wrap it in an array
-                    documentsToAdd = [jsonData];
+                try {
+                    // Extract the best array using the same logic as analyzeJsonStructure
+                    const rawDocuments = extractContentArray(jsonData);
+
+                    // Flatten documents to remove nested objects that Searchcraft can't handle
+                    const flattenedDocuments = rawDocuments.map(doc => flattenDocumentForSearchcraft(doc));
+
+                    // Prepare documents for Searchcraft
+                    documentsToAdd = prepareDocumentsForSearchcraft(flattenedDocuments, fields);
+
+
+
+                    const documentsEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents`;
+
+                    addDocumentsResponse = await makeSearchcraftRequest(
+                        documentsEndpoint,
+                        "POST",
+                        adminKey,
+                        documentsToAdd
+                    );
+
+                    //debugLog(`Documents added successfully. Response: ${JSON.stringify(addDocumentsResponse, null, 2)}`);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                    throw new Error(`Step 5 - Failed to add documents to index: ${errorMessage}`);
                 }
-
-                const documentsEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents`;
-                const addDocumentsResponse = await makeSearchcraftRequest(
-                    documentsEndpoint,
-                    "POST",
-                    adminKey,
-                    documentsToAdd
-                );
 
                 // Step 6: Commit the documents
                 debugLog("Step 6: Committing documents to the index");
-                const commitEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/commit`;
-                const commitResponse = await makeSearchcraftRequest(
-                    commitEndpoint,
-                    "POST",
-                    adminKey,
-                    {}
-                );
+                let commitResponse: any;
+                try {
+                    const commitEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/commit`;
+                    commitResponse = await makeSearchcraftRequest(
+                        commitEndpoint,
+                        "POST",
+                        adminKey,
+                        {}
+                    );
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                    throw new Error(`Failed to commit documents to index: ${errorMessage}`);
+                }
 
                 return {
                     content: [
