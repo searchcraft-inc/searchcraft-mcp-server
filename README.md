@@ -18,9 +18,27 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
 
 The Searchcraft MCP Server provides a suite of tools for managing your Searchcraft cluster's Documents, Indexes, Federations, Access Keys, and Analytics. It enables MCP Clients, like Claude Desktop, to be prompted in plain English to perform administrative actions like setting up search indexes, access keys, ingesting documents, viewing analytics, searching indexes, and more.
 
+## Sample Prompts
+
+Here is a sample prompt that could be used once Claude is connected to the Searchcraft MCP Server.
+
+```text
+I'd like to create a product search application using the create_vite_app tool.
+
+Please use this JSON dataset https://dummyjson.com/products
+First use the Searchcraft create_index_from_json tool to create the index and add the documents
+
+Then create an API read key for the vite app using the create_key tool.
+
+App details:
+- App name: "my-ecommerce-app"
+- Endpoint: http://localhost:8000
+- Index name: my-ecommerce-app
+```
+
 ## Available Tools
 
-The Searchcraft MCP Server provides two main categories of tools:
+The Searchcraft MCP Server currently provides three categories of tools, import tools, engine api tools, and app generation tools:
 
 ### Engine API Tools
 
@@ -113,7 +131,7 @@ These tools provide workflows for importing JSON data and automatically generati
 | analyze_json_from_file | Read JSON data from a local file and analyze its structure to understand field types and patterns for Searchcraft index schema generation. |
 | analyze_json_from_url | Fetch JSON data from a URL and analyze its structure to understand field types and patterns for Searchcraft index schema generation. |
 | generate_searchcraft_schema | Generate a complete Searchcraft index schema from analyzed JSON structure, with customizable options for search fields, weights, and other index settings. |
-| create_index_from_json | Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, and creates the index in one step. |
+| create_index_from_json | Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, creates the index, and adds all documents in one step. |
 
 #### Import Tools Workflow
 
@@ -126,7 +144,267 @@ The import tools are designed to work together in a streamlined workflow:
 
 **Or use the all-in-one approach:**
 
-- **One-Step** → Use `create_index_from_json` to analyze, generate schema, and create the index all in one command
+- **One-Step** → Use `create_index_from_json` to analyze, generate schema, create the index, and import all documents in one command
+
+### App Generation Tools
+
+These tools create complete, ready-to-run search applications from your JSON data, perfect for prototyping and demos.
+
+| Tool Name | Description |
+|-----------|-------------|
+| create_vite_app | Creates a complete Vite + React search application from JSON data. Analyzes your data structure, generates optimized search templates, and creates a fully functional web app with Searchcraft integration. |
+
+#### App Generation Workflow
+
+The app generation tools provide an end-to-end solution for creating search applications:
+
+1. **Data Analysis** → Automatically analyzes your JSON structure to understand field types and content
+2. **Template Generation** → Creates optimized search result templates based on your data fields
+3. **App Creation** → Clones and configures a complete Vite + React application
+4. **Environment Setup** → Configures Searchcraft connection settings
+5. **Ready to Run** → Provides a fully functional search app you can immediately start and customize
+
+## Detailed Tool Usage
+
+### Using create_index_from_json
+
+The `create_index_from_json` tool provides a complete workflow to create a Searchcraft index from JSON data in a single command. This is perfect for quickly setting up search indexes from existing datasets.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source` | `"url"` or `"file"` | ✅ | Whether to fetch data from a URL or read from a local file |
+| `path` | `string` | ✅ | URL or file path to the JSON data |
+| `index_name` | `string` | ✅ | Name for the new Searchcraft index |
+| `sample_size` | `number` | ❌ | Number of items to analyze for schema generation (default: 10) |
+| `search_fields` | `string[]` | ❌ | Override automatically detected search fields |
+| `weight_multipliers` | `object` | ❌ | Custom field weights for search relevance (0.0-10.0) |
+| `language` | `string` | ❌ | Language code for the index (e.g., "en", "es") |
+| `auto_commit_delay` | `number` | ❌ | Auto commit delay in seconds |
+| `exclude_stop_words` | `boolean` | ❌ | Whether to exclude stop words from search |
+| `time_decay_field` | `string` | ❌ | Field name for time-based relevance decay |
+
+#### Example Usage
+
+**From a URL:**
+
+```json
+{
+  "source": "url",
+  "path": "https://api.example.com/products.json",
+  "index_name": "products",
+  "sample_size": 50,
+  "search_fields": ["title", "description", "category"],
+  "weight_multipliers": {
+    "title": 2.0,
+    "description": 1.0,
+    "category": 1.5
+  }
+}
+```
+
+**From a local file:**
+```json
+{
+  "source": "file",
+  "path": "/path/to/data.json",
+  "index_name": "my_data",
+  "language": "en"
+}
+```
+
+#### What it does
+
+1. **Fetches/Reads Data** → Downloads from URL or reads from local file
+2. **Analyzes Structure** → Examines JSON to understand field types and patterns
+3. **Generates Schema** → Creates optimized Searchcraft index schema
+4. **Creates Index** → Sets up the index in your Searchcraft cluster
+5. **Imports Documents** → Adds all JSON data as searchable documents
+6. **Returns Summary** → Provides detailed information about what was created
+
+#### Expected JSON Format
+
+The tool works with various JSON structures:
+
+- **Array of objects**: `[{...}, {...}, ...]`
+- **Object with array property**: `{"data": [{...}, {...}], "meta": {...}}`
+- **Single object**: `{...}` (will be treated as a single document)
+
+The tool automatically finds the best array of objects to use for the index.
+
+### Using create_vite_app
+
+The `create_vite_app` tool creates a complete, ready-to-run search application from your JSON data. It's perfect for quickly prototyping search interfaces or creating demo applications.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `data_source` | `"url"` or `"file"` | ✅ | Whether to fetch data from a URL or read from a local file |
+| `data_path` | `string` | ✅ | URL or file path to the JSON data |
+| `app_name` | `string` | ✅ | Name for the generated app (used for directory name) |
+| `VITE_ENDPOINT_URL` | `string` | ✅ | Your Searchcraft cluster endpoint URL |
+| `VITE_INDEX_NAME` | `string` | ✅ | The Searchcraft index name to connect to |
+| `VITE_READ_KEY` | `string` | ✅ | Searchcraft read key for the application |
+| `sample_size` | `number` | ❌ | Number of items to analyze for template generation (default: 50) |
+| `search_fields` | `string[]` | ❌ | Override automatically detected search fields |
+| `weight_multipliers` | `object` | ❌ | Custom field weights for search relevance (0.0-10.0) |
+
+#### Example Usage
+
+If you saw the [prompt](#sample-prompts) earlier in the documentation you can easily use the `create_vite_app` tool with natural language. However, you want finer grain control you can use the tool with JSON parameters.
+
+**Creating a product search app:**
+```json
+{
+  "data_source": "url",
+  "data_path": "https://api.example.com/products.json",
+  "app_name": "product-search",
+  "VITE_ENDPOINT_URL": "https://your-cluster.searchcraft.io",
+  "VITE_INDEX_NAME": "products",
+  "VITE_READ_KEY": "your_read_key_here",
+  "sample_size": 100,
+  "search_fields": ["title", "description", "brand"],
+  "weight_multipliers": {
+    "title": 2.5,
+    "description": 1.0,
+    "brand": 1.8
+  }
+}
+```
+
+**Creating a blog search app from local data:**
+```json
+{
+  "data_source": "file",
+  "data_path": "/path/to/blog-posts.json",
+  "app_name": "blog-search",
+  "VITE_ENDPOINT_URL": "https://your-cluster.searchcraft.io",
+  "VITE_INDEX_NAME": "blog_posts",
+  "VITE_READ_KEY": "your_read_key_here"
+}
+```
+
+#### What it does
+
+1. **Analyzes Data Structure** → Examines your JSON to understand field types and content patterns
+2. **Generates Search Templates** → Creates optimized result display templates based on your data
+3. **Clones Vite Template** → Downloads the official Searchcraft Vite + React template
+4. **Installs Dependencies** → Sets up all required npm packages
+5. **Configures Environment** → Creates `.env` file with your Searchcraft settings
+6. **Customizes Templates** → Generates dynamic search result components
+7. **Updates App Code** → Modifies the main app with your specific branding and configuration
+
+#### Generated App Features
+
+The created application includes:
+
+- **React + Vite** → Modern, fast development setup
+- **Searchcraft SDK Integration** → Full search functionality out of the box
+- **Responsive Design** → Works on desktop and mobile devices
+- **Auto-generated Templates** → Smart result display based on your data structure
+- **Environment Configuration** → Easy setup for different environments
+- **Development Server** → Hot reload for rapid customization
+
+#### Template Generation Logic
+
+The tool intelligently analyzes your data to create optimal search result templates:
+
+- **Title Field Detection** → Finds the best field to use as the main title
+- **Description Field Detection** → Identifies descriptive text fields
+- **Image Field Detection** → Locates image URLs for visual results
+- **Date Field Detection** → Finds timestamp fields for temporal sorting
+- **Additional Fields** → Includes other relevant text fields for comprehensive results
+
+#### Next Steps After Creation
+
+Once the app is created, you can:
+
+1. **Start Vite Server**:
+   ```bash
+   cd apps/your-app-name
+   yarn dev
+   ```
+
+2. **Customize Styling** → Modify CSS and components to match your brand
+
+3. **Add Features** → Extend with filters, facets, or advanced search options
+
+4. **Deploy** → Build and deploy to your preferred hosting platform
+
+#### Prerequisites
+
+- **Existing Searchcraft Index** → The index specified in `VITE_INDEX_NAME` should already exist
+- **Valid Read Key** → The `VITE_READ_KEY` must have read permissions for the index
+- **Git Available** → The tool uses git to clone the template repository
+- **Node.js & Yarn** → Required for dependency installation
+
+### Complete Workflow: From JSON to Search App
+
+Here's how to use both tools together to go from raw JSON data to a fully functional search application:
+
+#### Option 1: Two-Step Process (Recommended for Production)
+
+**Step 1: Create the Searchcraft Index**
+```json
+{
+  "source": "url",
+  "path": "https://api.example.com/products.json",
+  "index_name": "products",
+  "sample_size": 100,
+  "search_fields": ["title", "description", "category", "brand"],
+  "weight_multipliers": {
+    "title": 2.5,
+    "description": 1.0,
+    "category": 1.8,
+    "brand": 1.5
+  },
+  "language": "en"
+}
+```
+
+**Step 2: Create the Search Application**
+```json
+{
+  "data_source": "url",
+  "data_path": "https://api.example.com/products.json",
+  "app_name": "product-search-app",
+  "VITE_ENDPOINT_URL": "https://your-cluster.searchcraft.io",
+  "VITE_INDEX_NAME": "products",
+  "VITE_READ_KEY": "your_read_key_here",
+  "sample_size": 100,
+  "search_fields": ["title", "description", "category", "brand"],
+  "weight_multipliers": {
+    "title": 2.5,
+    "description": 1.0,
+    "category": 1.8,
+    "brand": 1.5
+  }
+}
+```
+
+#### Option 2: App-Only Process (For Existing Indexes)
+
+If you already have a Searchcraft index set up, you can jump straight to creating the app:
+
+```json
+{
+  "data_source": "url",
+  "data_path": "https://api.example.com/products.json",
+  "app_name": "my-search-app",
+  "VITE_ENDPOINT_URL": "https://your-cluster.searchcraft.io",
+  "VITE_INDEX_NAME": "existing_index",
+  "VITE_READ_KEY": "your_read_key_here"
+}
+```
+
+#### Benefits of the Two-Step Approach
+
+- **Index Optimization** → Fine-tune your search index separately from the UI
+- **Multiple Apps** → Create different search interfaces for the same data
+- **Production Ready** → Better separation of concerns for production deployments
+- **Easier Debugging** → Test search functionality independently of the UI
 
 ## Getting Started
 
@@ -141,11 +419,15 @@ PORT=3100
 
 # Searchcraft Config
 ENDPOINT_URL= # The endpoint url of your Searchcraft Cluster
-ADMIN_KEY= # The admin key (super user key) of your Searchcraft Cluster
+ADMIN_KEY= # The admin key (super user key) of your Searchcraft Cluster when running locally.
 ```
 
 [.env sample](.env.example)
 
+### Remote Usage
+
+If you have already created an index through Vektron on Searchcraft Cloud you may use the write key for the index you are trying to access and use the MCP server for API operations that don't require admin privileges.
+**IMPORTANT**: If you use the MCP server with a write key it should **NOT** be publicly exposed to the internet. Write keys are intended to be secured and by running an MCP server any user with access to the MCP server will be able to write to the index or delete data.
 
 ### Installation & Setup
 
