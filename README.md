@@ -18,6 +18,14 @@ An MCP Server powered by <a href="https://searchcraft.io">Searchcraft</a> – th
 
 The Searchcraft MCP Server provides a suite of tools for managing your Searchcraft cluster's Documents, Indexes, Federations, Access Keys, and Analytics. It enables MCP Clients, like Claude Desktop, to be prompted in plain English to perform administrative actions like setting up search indexes, access keys, ingesting documents, viewing analytics, searching indexes, and more.
 
+## Building an app in 2 minutes with Searchcraft MCP Server (video link)
+
+<div align="center">
+  <a href="https://youtu.be/Vs_98sUrFqA?si=m9aH-tvUAAFwQQVy" title="Watch the video">
+    <img src="https://img.youtube.com/vi/Vs_98sUrFqA/hqdefault.jpg" alt="Building an app in 2 minutes with Searchcraft MCP Server">
+  </a>
+</div>
+
 ## Sample Prompts
 
 Here is a sample prompt that could be used once Claude is connected to the Searchcraft MCP Server.
