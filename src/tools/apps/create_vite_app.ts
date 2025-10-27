@@ -447,7 +447,7 @@ function App() {
 \t\t\tnew Searchcraft({
 \t\t\t\treadKey: READ_KEY,
 \t\t\t\tendpointURL: ENDPOINT_URL,
-\t\t\t\tindex: [INDEX_NAME],
+\t\t\t\tindexName: INDEX_NAME,
 \t\t\t});
 \t\t}
 \t}, [hasEnvVars]);
