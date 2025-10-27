@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./create-mcp-server.js";
-declare const __PACKAGE_VERSION__: string;
+declare const __PACKAGE_VERSION__: string; // available in the built version.
 
 const app = express();
 
@@ -72,8 +72,25 @@ app.get("/health", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Searchcraft MCP Server listening on port ${PORT}`);
     console.log(`Health check available at http://localhost:${PORT}/health`);
     console.log(`MCP endpoint available at http://localhost:${PORT}/mcp`);
+});
+
+// Graceful shutdown handling
+process.on('SIGINT', () => {
+    console.log('\nReceived SIGINT, shutting down gracefully...');
+    server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
+});
+
+process.on('SIGTERM', () => {
+    console.log('\nReceived SIGTERM, shutting down gracefully...');
+    server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
 });
