@@ -2,5 +2,9 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
     "dmackinn"
-  ]
+  ],
+  "docker": {
+    "image": "searchcraft-mcp-server",
+    "port": 8000
+  }
 }

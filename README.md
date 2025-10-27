@@ -669,6 +669,52 @@ For Claude Desktop with HTTP server, you'll need [mcp-remote](https://github.com
 }
 ```
 
+### Option 5: Docker
+
+Run the Searchcraft MCP server in a Docker container for easy deployment and portability.
+
+**Build the Docker image:**
+```bash
+docker build --load -t searchcraft-mcp-server .
+```
+
+**Run the container:**
+```bash
+docker run -it -p 8000:8000 \
+  --name searchcraft-mcp-server \
+  -e ENDPOINT_URL="https://your-cluster.searchcraft.io" \
+  -e ADMIN_KEY="your_admin_key_here" \
+  searchcraft-mcp-server
+```
+
+**Test the server:**
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Test MCP endpoint
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}'
+```
+
+**Remote inspection with MCP Inspector:**
+```bash
+npx @modelcontextprotocol/inspector --transport http --server-url http://localhost:8000/mcp
+```
+
+**Docker Configuration:**
+- Uses Node.js 22-slim as the base image
+- Exposes port 8000 by default (configurable via `PORT` environment variable)
+- Automatically handles graceful shutdown on SIGINT/SIGTERM
+- Optimized for production with minimal image size
+
+**Environment Variables:**
+- `PORT` - HTTP server port (default: 8000)
+- `ENDPOINT_URL` - Your Searchcraft cluster endpoint URL
+- `ADMIN_KEY` - Your Searchcraft admin key
+- `DEBUG` - Enable debug logging (optional)
+
 ### Available Scripts
 
 ```bash
@@ -685,31 +731,37 @@ yarn inspect      # Launch MCP inspector
 yarn claude-logs  # View Claude Desktop logs
 ```
 
-## stdio vs HTTP: Which to Choose?
+## Deployment Options Comparison
 
-| Feature | stdio (Recommended) | HTTP |
-|---------|-------------------|------|
-| **Performance** | ✅ Direct IPC, lower latency | ⚠️ HTTP overhead |
-| **Security** | ✅ No exposed ports | ⚠️ Network port required |
-| **Simplicity** | ✅ No port management | ⚠️ Port conflicts possible |
-| **Claude Desktop** | ✅ Native support | ⚠️ Requires mcp-remote |
-| **Claude Code** | ✅ Native support | ✅ Native support |
-| **Open WebUI** | ❌ Not supported | ✅ Via Pipelines framework |
-| **Remote Access** | ❌ Local only | ✅ Can deploy remotely |
-| **Testing** | ⚠️ Requires MCP tools | ✅ Easy with curl/Postman |
-| **Multiple Clients** | ❌ One client at a time | ✅ Multiple concurrent clients |
+| Feature | stdio (Recommended) | HTTP (Local) | Docker |
+|---------|---------------------|--------------|--------|
+| **Performance** | ✅ Best (Direct IPC) | ⚠️ HTTP overhead | ✅ Good |
+| **Security** | ✅ No exposed ports | ⚠️ Network port required | ✅ Isolated environment |
+| **Setup Complexity** | ✅ Simple | ⚠️ Port management needed | ✅ Simple (one command) |
+| **Claude Desktop** | ✅ Native support | ⚠️ Requires mcp-remote | ⚠️ Requires mcp-remote |
+| **Claude Code** | ✅ Native support | ✅ Supported | ✅ Supported |
+| **Open WebUI** | ❌ Not supported | ✅ Via Pipelines | ✅ Via Pipelines |
+| **Remote Deployment** | ❌ Local only | ✅ Possible but manual | ✅ Easy containerization |
+| **Testing** | ⚠️ Requires MCP tools | ✅ Easy with curl | ✅ Easy with curl |
+| **Multiple Clients** | ❌ One at a time | ✅ Concurrent access | ✅ Concurrent access |
+| **Portability** | ⚠️ Node.js required | ⚠️ Node.js required | ✅ Runs anywhere |
 
 **Use stdio when:**
 - Using Claude Desktop or Claude Code locally
-- You want the best performance
-- You prefer simplicity
+- You want the absolute best performance
+- You prefer direct process communication
 
-**Use HTTP when:**
-- You need remote access
-- You want easy testing/debugging
-- You need multiple concurrent clients
-- You're deploying to a server
-- Using Open WebUI or other web-based interfaces
+**Use HTTP (local) when:**
+- You need to test/debug the HTTP interface
+- You're developing custom integrations
+- You need multiple concurrent local clients
+
+**Use Docker when:**
+- You need remote deployment
+- You want easy, reproducible setup
+- You're deploying to cloud platforms
+- You want isolation and security
+- You need to publish your server for inspection
 
 ## Debugging
 
