@@ -165,12 +165,12 @@ export const ExampleSearchResultTemplate: SearchResultTemplate<
 export const registerCreateViteApp = (server: McpServer) => {
     /**
      * Tool: create_vite_app
-     * Creates a generic search app demo with the provided JSON dataset and Searchcraft configuration.
+     * Creates a generic search app with the provided JSON dataset and Searchcraft configuration.
      * Analyzes the JSON structure and generates appropriate search templates.
      */
     server.tool(
         "create_vite_app",
-        "Creates a generic search app demo by analyzing a JSON dataset and generating a Vite app with Searchcraft integration",
+        "Creates a generic search app by analyzing a JSON dataset and generating a Vite app with Searchcraft integration",
         {
             request: CreateViteAppSchema.describe(
                 "Complete request to create a Vite app from JSON dataset"
@@ -660,7 +660,7 @@ Files created/updated:
 - src/App.tsx - Updated with app-specific branding
 
 Next steps:
-1. Navigate to the app directory: cd demos/${app_name}
+1. Navigate to the app directory: cd apps/${app_name}
 2. Start the development server: yarn dev
 3. The browser should open automatically at http://localhost:5173
 
