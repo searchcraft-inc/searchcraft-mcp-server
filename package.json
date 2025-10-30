@@ -16,7 +16,9 @@
         "typecheck": "tsc --noEmit",
         "inspect": "yarn build && npx @modelcontextprotocol/inspector node ./dist/stdio-server.js",
         "inspect:rest": "yarn build && (yarn start &) && sleep 3 && npx @modelcontextprotocol/inspector --transport http --server-url http://localhost:3100/mcp",
-        "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log"
+        "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log",
+        "lint": "biome check .",
+        "lint:fix": "biome check --write ."
     },
     "bin": {
         "searchcraft": "./dist/server.js",
