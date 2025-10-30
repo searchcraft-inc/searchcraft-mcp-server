@@ -46,7 +46,7 @@ export const makeSearchcraftRequest = async (
 
         // Enhanced error logging for document validation issues
         if (endpoint.includes('/documents') && errorText.includes('validation')) {
-            debugLog(`Searchcraft document validation error:`);
+            debugLog('Searchcraft document validation error:');
             debugLog(`  Status: ${response.status} ${response.statusText}`);
             debugLog(`  Response: ${errorText}`);
             debugLog(`  Request endpoint: ${endpoint}`);
@@ -111,7 +111,7 @@ export function debugLog(
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] [${level}] ${message}`;
 
-    process.stderr.write(logMessage + '\n');
+    process.stderr.write(`${logMessage} \n`);
 }
 
 /**
@@ -119,7 +119,10 @@ export function debugLog(
  * This addresses the issue where integer values like 1 cause validation errors
  * when sent to Searchcraft for fields marked as f64 in the schema.
  */
-export const prepareDocumentsForSearchcraft = (documents: any[], schema: Record<string, any>): any[] => {
+export const prepareDocumentsForSearchcraft = (
+    documents: Record<string, unknown>[],
+    schema: Record<string, { type?: string; [key: string]: unknown }>
+): Record<string, unknown>[] => {
     // Find f64 fields in the schema
     const f64Fields = Object.entries(schema)
         .filter(([_, config]) => config?.type === "f64")
@@ -132,6 +135,7 @@ export const prepareDocumentsForSearchcraft = (documents: any[], schema: Record<
     return documents.map(doc => {
         const prepared = { ...doc };
 
+        // biome-ignore lint/complexity/noForEach: its fine.
         f64Fields.forEach(fieldName => {
             const value = prepared[fieldName];
             if (typeof value === "number" && Number.isInteger(value)) {

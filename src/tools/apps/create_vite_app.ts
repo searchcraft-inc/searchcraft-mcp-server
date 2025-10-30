@@ -11,9 +11,18 @@ import {
 import { CreateViteAppSchema } from "../schemas.js";
 import { analyzeJsonStructure, type JsonStructureAnalysis, type FieldAnalysis } from "../import/json-analyzer.js";
 
+interface FieldConfig {
+    type: string;
+    stored: boolean;
+    required?: boolean;
+    indexed?: boolean;
+    fast?: boolean;
+    multi?: boolean;
+}
+
 // Helper function to generate schema fields from analysis (reusing existing logic)
-function generateSchemaFields(analysis: JsonStructureAnalysis): Record<string, any> {
-    const fields: Record<string, any> = {};
+function generateSchemaFields(analysis: JsonStructureAnalysis): Record<string, FieldConfig> {
+    const fields: Record<string, FieldConfig> = {};
 
     for (const [fieldName, fieldAnalysis] of Object.entries(analysis.fields)) {
         // Skip nested object fields for now (they would need flattening)
@@ -22,7 +31,7 @@ function generateSchemaFields(analysis: JsonStructureAnalysis): Record<string, a
             continue;
         }
 
-        const fieldConfig: any = {
+        const fieldConfig: FieldConfig = {
             type: fieldAnalysis.searchcraft_type,
             stored: fieldAnalysis.suggested_config.stored,
         };
@@ -120,6 +129,7 @@ function generateSearchResultTemplate(analysis: JsonStructureAnalysis, appName: 
         !mediaPatterns.some(pattern => name.toLowerCase().includes(pattern)) // Exclude media fields
     ).slice(0, 2); // Limit to 2 additional fields
 
+    // biome-ignore lint/complexity/noForEach: <explanation>
     otherFields.forEach(fieldName => {
         templateHtml += `
       <p class="result-field"><strong>${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}:</strong> \${data.${fieldName}}</p>`;
@@ -127,6 +137,7 @@ function generateSearchResultTemplate(analysis: JsonStructureAnalysis, appName: 
 
     // Add array fields as tags
     const arrayFields = fieldNames.filter(name => fields[name].is_array).slice(0, 2);
+    // biome-ignore lint/complexity/noForEach: <explanation>
     arrayFields.forEach(fieldName => {
         templateHtml += `
       <div class="result-tags">
@@ -206,7 +217,7 @@ export const registerCreateViteApp = (server: McpServer) => {
 
                 // Step 1: Load and analyze JSON data
                 debugLog("Step 1: Loading and analyzing JSON data");
-                let jsonData: any;
+                let jsonData: unknown;
 
                 if (data_source === "url") {
                     debugLog(`Fetching JSON from URL: ${data_path}`);
@@ -238,9 +249,10 @@ export const registerCreateViteApp = (server: McpServer) => {
                 // Check if data is nested and provide helpful info
                 if (!Array.isArray(jsonData) && typeof jsonData === "object" && jsonData !== null) {
                     // Simple check for immediate array properties (for logging purposes)
-                    const immediateArrays = Object.keys(jsonData)
-                        .filter(key => Array.isArray(jsonData[key]))
-                        .map(key => ({ key, length: jsonData[key].length }));
+                    const jsonObj = jsonData as Record<string, unknown>;
+                    const immediateArrays = Object.keys(jsonObj)
+                        .filter(key => Array.isArray(jsonObj[key]))
+                        .map(key => ({ key, length: (jsonObj[key] as unknown[]).length }));
 
                     if (immediateArrays.length > 0) {
                         debugLog(`Detected nested data structure with ${immediateArrays.length} immediate array(s). Analyzer will find the best array to use.`);
@@ -265,7 +277,7 @@ export const registerCreateViteApp = (server: McpServer) => {
                 debugLog(`Creating apps directory at: ${appsRoot}`);
                 try {
                     await mkdir(appsRoot, { recursive: true });
-                    debugLog(`Successfully created apps directory`);
+                    debugLog("Successfully created apps directory");
                 } catch (error) {
                     return createErrorResponse(`Failed to create apps directory at ${appsRoot}: ${error}`);
                 }
@@ -296,11 +308,11 @@ export const registerCreateViteApp = (server: McpServer) => {
                 debugLog(`Step 5: Installing dependencies in: ${appDir}`);
                 try {
                     const installEnv = {
-                        PATH: `$/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin/`,
+                        PATH: "$/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin/",
                         SHELL: "/bin/bash"
                     };
 
-                    debugLog(`Starting dependency installation (this may take 30-60 seconds)...`);
+                    debugLog("Starting dependency installation (this may take 30-60 seconds)...");
 
                     try {
                         // Try yarn first (since template has yarn.lock)
@@ -375,7 +387,7 @@ VITE_READ_KEY=${VITE_READ_KEY}`;
                 };
 
                 // Generate sample data from the first few items
-                let exampleData: any[] = [];
+                let exampleData: unknown[] = [];
                 if (Array.isArray(jsonData)) {
                     exampleData = jsonData.slice(0, Math.min(3, jsonData.length));
                 } else {
