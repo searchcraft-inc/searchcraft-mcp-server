@@ -1,16 +1,14 @@
 {
-  "mcpServers": {
-    "searchcraft": {
-      "command": "node",
-      "args": [
-        "/path/to/searchcraft-mcp-server/dist/stdio-server.js"
-      ],
-      "env": {
-        "ENDPOINT_URL": "http://localhost:8000",
-        "ADMIN_KEY": "12345",
-        "DEBUG": "false",
-        "LOG_LEVEL": "LOG"
-      }
+    "mcpServers": {
+        "searchcraft": {
+            "command": "node",
+            "args": ["/path/to/searchcraft-mcp-server/dist/stdio-server.js"],
+            "env": {
+                "ENDPOINT_URL": "http://localhost:8000",
+                "CORE_API_KEY": "12345",
+                "DEBUG": "false",
+                "LOG_LEVEL": "LOG"
+            }
+        }
     }
-  }
 }

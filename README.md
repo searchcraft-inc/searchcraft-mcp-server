@@ -427,7 +427,7 @@ PORT=3100
 
 # Searchcraft Config
 ENDPOINT_URL= # The endpoint url of your Searchcraft Cluster
-ADMIN_KEY= # The admin key (super user key) of your Searchcraft Cluster when running locally.
+CORE_API_KEY= # The Searchcraft API key of your Searchcraft cluster. Must match the permissions required by the tools you are using.
 ```
 
 [.env sample](.env.example)
@@ -499,7 +499,7 @@ claude mcp add searchcraft -- node /path/to/searchcraft-mcp-server/dist/stdio-se
 # Add with your Searchcraft cluster configuration
 claude mcp add searchcraft \
   --env ENDPOINT_URL=https://your-cluster.searchcraft.io \
-  --env ADMIN_KEY=your_admin_key_here \
+  --env CORE_API_KEY=YOUR_API_KEY \
   -- node /path/to/searchcraft-mcp-server/dist/stdio-server.js
 ```
 
@@ -553,7 +553,7 @@ class Pipeline:
     class Valves(BaseModel):
         MCP_SERVER_URL: str = "http://localhost:3100/mcp"
         ENDPOINT_URL: str = ""
-        ADMIN_KEY: str = ""
+        CORE_API_KEY: str = ""
 
     def __init__(self):
         self.name = "Searchcraft MCP Pipeline"
@@ -612,7 +612,7 @@ class Pipeline:
    - Configure the valves with your Searchcraft settings:
      - `MCP_SERVER_URL`: `http://localhost:3100/mcp`
      - `ENDPOINT_URL`: Your Searchcraft cluster URL
-     - `ADMIN_KEY`: Your Searchcraft admin key
+     - `CORE_API_KEY`: Your Searchcraft API key
 
 2. **Via Docker Environment:**
    ```bash
@@ -691,7 +691,7 @@ docker build --load -t searchcraft-mcp-server .
 docker run -it -p 8000:8000 \
   --name searchcraft-mcp-server \
   -e ENDPOINT_URL="https://your-cluster.searchcraft.io" \
-  -e ADMIN_KEY="your_admin_key_here" \
+  -e CORE_API_KEY="your_searchcraft_core_API_key" \
   searchcraft-mcp-server
 ```
 
@@ -713,14 +713,14 @@ npx @modelcontextprotocol/inspector --transport http --server-url http://localho
 
 **Docker Configuration:**
 - Uses Node.js 22-slim as the base image
-- Exposes port 8000 by default (configurable via `PORT` environment variable)
+- Exposes port 3100 by default (configurable via `PORT` environment variable)
 - Automatically handles graceful shutdown on SIGINT/SIGTERM
 - Optimized for production with minimal image size
 
 **Environment Variables:**
 - `PORT` - HTTP server port (default: 8000)
 - `ENDPOINT_URL` - Your Searchcraft cluster endpoint URL
-- `ADMIN_KEY` - Your Searchcraft admin key
+- `CORE_API_KEY` - Your Searchcraft API key
 - `DEBUG` - Enable debug logging (optional)
 
 ### Available Scripts
