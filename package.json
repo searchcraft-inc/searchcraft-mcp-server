@@ -18,13 +18,20 @@
         "inspect:rest": "yarn build && (yarn start &) && sleep 3 && npx @modelcontextprotocol/inspector --transport http --server-url http://localhost:3100/mcp",
         "claude-logs": "tail -n 20 -F ~/Library/Logs/Claude/mcp*.log",
         "lint": "biome check .",
-        "lint:fix": "biome check --write ."
+        "lint:fix": "biome check --write .",
+        "test": "vitest",
+        "test:run": "vitest run",
+        "test:watch": "vitest watch",
+        "test:coverage": "vitest run --coverage",
+        "test:ui": "vitest --ui"
     },
     "bin": {
         "searchcraft": "./dist/server.js",
         "searchcraft-stdio": "./dist/stdio-server.js"
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.18.2",
         "dotenv": "^16.6.1",
@@ -35,8 +42,14 @@
         "@biomejs/biome": "1.9.4",
         "@types/express": "^5.0.2",
         "@types/node": "^22.15.21",
+        "@types/supertest": "^6.0.3",
+        "@vitest/coverage-v8": "^4.0.6",
+        "@vitest/ui": "^4.0.6",
         "esbuild": "^0.25.5",
+        "msw": "^2.11.6",
+        "supertest": "^7.1.4",
         "tsx": "^4.19.4",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "vitest": "^4.0.6"
     }
 }

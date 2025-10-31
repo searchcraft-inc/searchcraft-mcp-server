@@ -771,6 +771,37 @@ yarn claude-logs  # View Claude Desktop logs
 - You want isolation and security
 - You need to publish your server for inspection
 
+## Testing
+
+The Searchcraft MCP Server includes a comprehensive test suite built with Vitest.
+
+### Run Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Show test reports
+npm run test:ui
+```
+
+### Test Coverage
+
+- ✅ **89 tests** covering core functionality
+- ✅ **84%+ coverage** on helpers and utilities
+- ✅ **93%+ coverage** on JSON analyzer
+- ✅ **100% coverage** on server creation
+- ✅ Integration tests for HTTP endpoints
+- ✅ Unit tests for all major components
+
+See [test/README.md](test/README.md) for detailed testing documentation.
+
 ## Debugging
 
 ### Claude Desktop Logs

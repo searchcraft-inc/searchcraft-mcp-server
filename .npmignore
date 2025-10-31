@@ -1,0 +1,59 @@
+# Source files
+src/
+test/
+__tests__/
+
+# Configuration files
+vitest.config.ts
+tsconfig.json
+biome.json
+build.mjs
+
+# Test and coverage
+*.test.ts
+*.spec.ts
+coverage/
+.vitest/
+
+# Development files
+.env
+.env.*
+*.log
+.DS_Store
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation (keep README.md)
+docs/
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+node_modules/
+yarn-error.log
+npm-debug.log
+
+# Examples and demos
+examples/
+example-data.json
+claude_desktop_config.example.json
+glama.json
+open_webui_pipeline.py
+OPEN_WEBUI_SETUP.md
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+header.png
+
