@@ -1,14 +1,47 @@
+import { constants, access, readFile } from "node:fs/promises";
+import { extname, resolve } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { readFile, access, constants } from "node:fs/promises";
-import { resolve, extname } from "node:path";
 import {
     createErrorResponse,
     debugLog,
+    getSearchcraftConfig,
     makeSearchcraftRequest,
     prepareDocumentsForSearchcraft,
 } from "../../helpers.js";
 import { CreateIndexFromJsonSchema } from "../schemas.js";
-import { analyzeJsonStructure, extractContentArray, flattenDocumentForSearchcraft } from "./json-analyzer.js";
+import {
+    type FieldAnalysis,
+    type JsonStructureAnalysis,
+    analyzeJsonStructure,
+    extractContentArray,
+    flattenDocumentForSearchcraft,
+} from "./json-analyzer.js";
+
+// Type definitions for Searchcraft API
+interface SearchcraftFieldConfig {
+    type: "text" | "datetime" | "bool" | "f64" | "u64" | "i64" | "facet";
+    required?: boolean;
+    stored?: boolean;
+    indexed?: boolean;
+    fast?: boolean;
+    multi?: boolean;
+    [key: string]: unknown;
+}
+
+interface SearchcraftIndexSchema {
+    name: string;
+    search_fields: string[];
+    fields: Record<string, SearchcraftFieldConfig>;
+    weight_multipliers?: Record<string, number>;
+    language?: string;
+    auto_commit_delay?: number;
+    exclude_stop_words?: boolean;
+    time_decay_field?: string;
+}
+
+interface SearchcraftApiResponse {
+    [key: string]: unknown;
+}
 
 export const registerCreateIndexFromJson = (server: McpServer) => {
     /**
@@ -20,7 +53,7 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
         "Complete workflow to create a Searchcraft index from JSON data. Fetches JSON from URL or file, analyzes structure, generates schema, creates the index, and adds all the JSON data as documents to the index in one step.",
         {
             request: CreateIndexFromJsonSchema.describe(
-                "Complete request to create index from JSON source"
+                "Complete request to create index from JSON source",
             ),
         },
         async ({ request }) => {
@@ -31,7 +64,7 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                     path,
                     index_name,
                     sample_size = 50,
-                    search_fields,
+                    search_fields: _search_fields, // Prefixed with _ to indicate intentionally unused
                     weight_multipliers,
                     language,
                     auto_commit_delay,
@@ -41,20 +74,16 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                 } = request;
 
                 // Validate environment
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse("ENDPOINT_URL environment variable is required");
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse("ADMIN_KEY environment variable is required");
-                }
+                const { endpointUrl, apiKey } = config;
 
                 // Step 1: Fetch/Read JSON data
                 debugLog(`Step 1: Fetching JSON from ${source}: ${path}`);
-                let jsonData: any;
-                let sourceInfo: any = {};
+                let jsonData: unknown;
+                let sourceInfo: unknown = {};
 
                 try {
                     if (source === "url") {
@@ -63,17 +92,21 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                         try {
                             url = new URL(path);
                         } catch {
-                            return createErrorResponse("Invalid URL format provided");
+                            return createErrorResponse(
+                                "Invalid URL format provided",
+                            );
                         }
 
                         if (!["http:", "https:"].includes(url.protocol)) {
-                            return createErrorResponse("Only HTTP and HTTPS URLs are supported");
+                            return createErrorResponse(
+                                "Only HTTP and HTTPS URLs are supported",
+                            );
                         }
 
                         // Fetch from URL
                         const response = await fetch(path, {
                             headers: {
-                                "Accept": "application/json",
+                                Accept: "application/json",
                                 "User-Agent": "Searchcraft-MCP-Server/1.0",
                             },
                             signal: AbortSignal.timeout(30000),
@@ -81,7 +114,7 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
 
                         if (!response.ok) {
                             return createErrorResponse(
-                                `Failed to fetch URL: ${response.status} ${response.statusText}`
+                                `Failed to fetch URL: ${response.status} ${response.statusText}`,
                             );
                         }
 
@@ -93,19 +126,22 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                             content_type: response.headers.get("content-type"),
                             response_size: jsonText.length,
                         };
-
                     } else if (source === "file") {
                         // Validate and read file
                         const filePath = resolve(path);
 
                         if (filePath.includes("..") || filePath.includes("~")) {
-                            return createErrorResponse("File path contains potentially unsafe characters");
+                            return createErrorResponse(
+                                "File path contains potentially unsafe characters",
+                            );
                         }
 
                         try {
                             await access(filePath, constants.R_OK);
                         } catch {
-                            return createErrorResponse(`File not found or not readable: ${path}`);
+                            return createErrorResponse(
+                                `File not found or not readable: ${path}`,
+                            );
                         }
 
                         const fileContent = await readFile(filePath, "utf-8");
@@ -115,8 +151,8 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                         if ([".jsonl", ".ndjson"].includes(ext)) {
                             const lines = fileContent.trim().split("\n");
                             jsonData = lines
-                                .filter(line => line.trim().length > 0)
-                                .map(line => JSON.parse(line));
+                                .filter((line) => line.trim().length > 0)
+                                .map((line) => JSON.parse(line));
                         } else {
                             jsonData = JSON.parse(fileContent);
                         }
@@ -130,61 +166,86 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                         };
                     }
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-                    throw new Error(`Failed to fetch/read JSON data: ${errorMessage}`);
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error occurred";
+                    throw new Error(
+                        `Failed to fetch/read JSON data: ${errorMessage}`,
+                    );
                 }
 
                 // Step 2: Analyze JSON structure (using flattened documents)
                 debugLog("Step 2: Analyzing JSON structure");
-                let analysis: any;
+                let analysis: JsonStructureAnalysis;
                 try {
                     // First extract the raw documents
                     const rawDocuments = extractContentArray(jsonData);
 
                     // Flatten a sample of documents for analysis
                     const sampleDocuments = rawDocuments.slice(0, sample_size);
-                    const flattenedSample = sampleDocuments.map(doc => flattenDocumentForSearchcraft(doc));
+                    const flattenedSample = sampleDocuments.map((doc) =>
+                        flattenDocumentForSearchcraft(doc),
+                    );
 
                     // Create a synthetic JSON structure with the flattened documents
                     const flattenedJsonData = { documents: flattenedSample };
 
-                    analysis = analyzeJsonStructure(flattenedJsonData, sample_size);
+                    analysis = analyzeJsonStructure(
+                        flattenedJsonData,
+                        sample_size,
+                    );
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-                    throw new Error(`Failed to analyze JSON structure: ${errorMessage}`);
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error occurred";
+                    throw new Error(
+                        `Failed to analyze JSON structure: ${errorMessage}`,
+                    );
                 }
 
                 // Step 3: Generate Searchcraft schema
                 debugLog("Step 3: Generating Searchcraft schema");
-                let schema: any;
-                let fields: Record<string, any> = {};
+                let schema: SearchcraftIndexSchema;
+                const fields: Record<string, SearchcraftFieldConfig> = {};
                 let finalSearchFields: string[] = [];
-                let finalWeightMultipliers: any = {};
+                let finalWeightMultipliers: Record<string, number> = {};
 
                 try {
-                    for (const [fieldName, fieldAnalysis] of Object.entries(analysis.fields)) {
+                    for (const [fieldName, fieldAnalysis] of Object.entries(
+                        analysis.fields,
+                    )) {
                         // Include all fields, including flattened ones with dots
                         // This ensures schema matches the flattened document structure
 
-                        const fieldInfo = fieldAnalysis as any; // Type assertion for analysis result
-                        const fieldConfig: any = {
+                        const fieldInfo = fieldAnalysis as FieldAnalysis;
+                        const fieldConfig: SearchcraftFieldConfig = {
                             type: fieldInfo.searchcraft_type,
                             stored: fieldInfo.suggested_config.stored,
                         };
 
                         if (fieldInfo.is_required) fieldConfig.required = true;
-                        if (!fieldInfo.suggested_config.indexed) fieldConfig.indexed = false;
-                        if (fieldInfo.suggested_config.fast) fieldConfig.fast = true;
-                        if (fieldInfo.suggested_config.multi) fieldConfig.multi = true;
+                        if (!fieldInfo.suggested_config.indexed)
+                            fieldConfig.indexed = false;
+                        if (fieldInfo.suggested_config.fast)
+                            fieldConfig.fast = true;
+                        if (fieldInfo.suggested_config.multi)
+                            fieldConfig.multi = true;
 
                         fields[fieldName] = fieldConfig;
                     }
 
                     // Determine weight multipliers first
-                    finalWeightMultipliers = weight_multipliers ||
+                    finalWeightMultipliers =
+                        weight_multipliers ||
                         Object.fromEntries(
-                            Object.entries(analysis.suggested_weight_multipliers)
-                                .filter(([fieldName]) => fields[fieldName]?.type === "text")
+                            Object.entries(
+                                analysis.suggested_weight_multipliers,
+                            ).filter(
+                                ([fieldName]) =>
+                                    fields[fieldName]?.type === "text",
+                            ),
                         );
 
                     // Search fields are always derived from weight_multipliers (search_fields parameter is ignored)
@@ -201,20 +262,28 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                         schema.weight_multipliers = finalWeightMultipliers;
                     }
                     if (language) schema.language = language;
-                    if (auto_commit_delay !== undefined) schema.auto_commit_delay = auto_commit_delay;
-                    if (exclude_stop_words !== undefined) schema.exclude_stop_words = exclude_stop_words;
-                    if (time_decay_field) schema.time_decay_field = time_decay_field;
+                    if (auto_commit_delay !== undefined)
+                        schema.auto_commit_delay = auto_commit_delay;
+                    if (exclude_stop_words !== undefined)
+                        schema.exclude_stop_words = exclude_stop_words;
+                    if (time_decay_field)
+                        schema.time_decay_field = time_decay_field;
 
                     // Debug: Log the schema being created
                     //debugLog(`Generated schema: ${JSON.stringify(schema, null, 2)}`);
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-                    throw new Error(`Failed to generate Searchcraft schema: ${errorMessage}`);
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error occurred";
+                    throw new Error(
+                        `Failed to generate Searchcraft schema: ${errorMessage}`,
+                    );
                 }
 
                 // Step 4: Create index
                 debugLog("Step 4: Creating Searchcraft index");
-                let createResponse: any;
+                let createResponse: SearchcraftApiResponse;
                 try {
                     const endpoint = `${endpointUrl.replace(/\/$/, "")}/index`;
                     const createRequest = {
@@ -225,63 +294,80 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                     createResponse = await makeSearchcraftRequest(
                         endpoint,
                         "POST",
-                        adminKey,
-                        createRequest
+                        apiKey,
+                        createRequest,
                     );
 
                     //debugLog(`Index created successfully. Response: ${JSON.stringify(createResponse, null, 2)}`);
-
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-                    throw new Error(`Failed to create Searchcraft index: ${errorMessage}`);
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error occurred";
+                    throw new Error(
+                        `Failed to create Searchcraft index: ${errorMessage}`,
+                    );
                 }
 
                 // Step 5: Add documents to the index
                 debugLog("Step 5: Adding documents to the index");
-                let documentsToAdd: any[] = [];
-                let addDocumentsResponse: any;
+                let documentsToAdd: Record<string, unknown>[] = [];
+                let addDocumentsResponse: SearchcraftApiResponse;
 
                 try {
                     // Extract the best array using the same logic as analyzeJsonStructure
                     const rawDocuments = extractContentArray(jsonData);
 
                     // Flatten documents to remove nested objects that Searchcraft can't handle
-                    const flattenedDocuments = rawDocuments.map(doc => flattenDocumentForSearchcraft(doc));
+                    const flattenedDocuments = rawDocuments.map((doc) =>
+                        flattenDocumentForSearchcraft(doc),
+                    );
 
                     // Prepare documents for Searchcraft
-                    documentsToAdd = prepareDocumentsForSearchcraft(flattenedDocuments, fields);
-
-
+                    documentsToAdd = prepareDocumentsForSearchcraft(
+                        flattenedDocuments,
+                        fields,
+                    );
 
                     const documentsEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents`;
 
                     addDocumentsResponse = await makeSearchcraftRequest(
                         documentsEndpoint,
                         "POST",
-                        adminKey,
-                        documentsToAdd
+                        apiKey,
+                        documentsToAdd,
                     );
 
                     //debugLog(`Documents added successfully. Response: ${JSON.stringify(addDocumentsResponse, null, 2)}`);
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-                    throw new Error(`Step 5 - Failed to add documents to index: ${errorMessage}`);
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error occurred";
+                    throw new Error(
+                        `Step 5 - Failed to add documents to index: ${errorMessage}`,
+                    );
                 }
 
                 // Step 6: Commit the documents
                 debugLog("Step 6: Committing documents to the index");
-                let commitResponse: any;
+                let commitResponse: SearchcraftApiResponse;
                 try {
                     const commitEndpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/commit`;
                     commitResponse = await makeSearchcraftRequest(
                         commitEndpoint,
                         "POST",
-                        adminKey,
-                        {}
+                        apiKey,
+                        {},
                     );
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-                    throw new Error(`Failed to commit documents to index: ${errorMessage}`);
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error occurred";
+                    throw new Error(
+                        `Failed to commit documents to index: ${errorMessage}`,
+                    );
                 }
 
                 return {
@@ -291,43 +377,51 @@ export const registerCreateIndexFromJson = (server: McpServer) => {
                             resource: {
                                 uri: `searchcraft://index-created-from-json/${index_name}/${Date.now()}`,
                                 mimeType: "application/json",
-                                text: JSON.stringify({
-                                    success: true,
-                                    created_at: new Date().toISOString(),
-                                    source: sourceInfo,
-                                    analysis_summary: {
-                                        total_objects_analyzed: analysis.total_objects_analyzed,
-                                        total_fields_found: Object.keys(analysis.fields).length,
-                                        fields_included: Object.keys(fields).length,
-                                        search_fields: finalSearchFields,
-                                        weight_multipliers: finalWeightMultipliers,
+                                text: JSON.stringify(
+                                    {
+                                        success: true,
+                                        created_at: new Date().toISOString(),
+                                        source: sourceInfo,
+                                        analysis_summary: {
+                                            total_objects_analyzed:
+                                                analysis.total_objects_analyzed,
+                                            total_fields_found: Object.keys(
+                                                analysis.fields,
+                                            ).length,
+                                            fields_included:
+                                                Object.keys(fields).length,
+                                            search_fields: finalSearchFields,
+                                            weight_multipliers:
+                                                finalWeightMultipliers,
+                                        },
+                                        created_index: {
+                                            name: index_name,
+                                            schema,
+                                        },
+                                        documents_added: {
+                                            count: documentsToAdd.length,
+                                            sample: documentsToAdd.slice(0, 3), // Show first 3 documents as sample
+                                        },
+                                        searchcraft_responses: {
+                                            create_index: createResponse,
+                                            add_documents: addDocumentsResponse,
+                                            commit: commitResponse,
+                                        },
                                     },
-                                    created_index: {
-                                        name: index_name,
-                                        schema,
-                                    },
-                                    documents_added: {
-                                        count: documentsToAdd.length,
-                                        sample: documentsToAdd.slice(0, 3), // Show first 3 documents as sample
-                                    },
-                                    searchcraft_responses: {
-                                        create_index: createResponse,
-                                        add_documents: addDocumentsResponse,
-                                        commit: commitResponse,
-                                    },
-                                }, null, 2),
+                                    null,
+                                    2,
+                                ),
                             },
                         },
                     ],
                 };
-
             } catch (error) {
                 const errorMessage =
                     error instanceof Error
                         ? error.message
                         : "Unknown error occurred";
                 return createErrorResponse(
-                    `Failed to create index from JSON: ${errorMessage}`
+                    `Failed to create index from JSON: ${errorMessage}`,
                 );
             }
         },

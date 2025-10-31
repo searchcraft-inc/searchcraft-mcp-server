@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
     createErrorResponse,
     debugLog,
+    getSearchcraftConfig,
     makeSearchcraftRequest,
 } from "../../../helpers.js";
 
@@ -25,25 +26,17 @@ export const registerAddDocuments = (server: McpServer) => {
         async ({ index_name, documents }) => {
             debugLog("[Tool Call] add_documents");
             try {
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse(
-                        "ENDPOINT_URL environment variable is required",
-                    );
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse(
-                        "ADMIN_KEY environment variable is required",
-                    );
-                }
+                const { endpointUrl, apiKey } = config;
 
                 const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "POST",
-                    adminKey,
+                    apiKey,
                     documents,
                 );
 
@@ -51,7 +44,7 @@ export const registerAddDocuments = (server: McpServer) => {
                 const commitResponse = await makeSearchcraftRequest(
                     commitEndpoint,
                     "POST",
-                    adminKey,
+                    apiKey,
                     documents,
                 );
 

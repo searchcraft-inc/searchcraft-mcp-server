@@ -1,8 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { SearchcraftQuery } from "../../../types.js";
-import { debugLog, performSearchcraftRequest } from "../../../helpers.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import {
+    debugLog,
+    getSearchcraftConfig,
+    performSearchcraftRequest,
+} from "../../../helpers.js";
+import type { SearchcraftQuery } from "../../../types.js";
 
 /**
  * Tool: get_search_index_schema
@@ -24,20 +28,11 @@ export const registerGetPrelimSearchDataSchema = (server: McpServer) => {
         },
         async ({ index, readKey }) => {
             debugLog("[Tool Call] get-search-index-schema");
-            const baseUrl = process.env.ENDPOINT_URL;
-
-            // Validate required environment variables
-            if (!baseUrl) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: "❌ Error: ENDPOINT_URL environment variable is required",
-                        },
-                    ],
-                    isError: true,
-                };
+            const config = getSearchcraftConfig();
+            if (config.error) {
+                return config.error;
             }
+            const { endpointUrl: baseUrl } = config;
 
             if (!readKey) {
                 return {
