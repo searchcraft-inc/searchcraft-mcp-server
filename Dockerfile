@@ -1,5 +1,8 @@
 FROM node:22-slim
 
+# Add MCP server metadata label
+LABEL io.modelcontextprotocol.server.name="io.github.searchcraft-inc/searchcraft-mcp-server"
+
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
@@ -22,5 +25,7 @@ ENV CORE_API_KEY=""
 # Expose the port (can be overridden via PORT env var)
 EXPOSE ${PORT}
 
-CMD ["node", "dist/server.js"]
+# Default to stdio mode for MCP Inspector compatibility
+# Override with: docker run <image> node dist/server.js for HTTP mode
+CMD ["node", "dist/stdio-server.js"]
 
