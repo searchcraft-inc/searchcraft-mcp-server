@@ -1,8 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
-    createErrorResponse,
-    debugLog,
-} from "../../helpers.js";
+import { createErrorResponse, debugLog } from "../../helpers.js";
 import { GenerateSchemaRequestSchema, IndexFieldSchema } from "../schemas.js";
 import type { JsonStructureAnalysis } from "./json-analyzer.js";
 
@@ -16,7 +13,7 @@ export const registerGenerateSearchcraftSchema = (server: McpServer) => {
         "Generate a complete Searchcraft index schema from analyzed JSON structure, with customizable options for search fields, weights, and other index settings",
         {
             request: GenerateSchemaRequestSchema.describe(
-                "Schema generation request with JSON analysis and customization options"
+                "Schema generation request with JSON analysis and customization options",
             ),
         },
         async ({ request }) => {
@@ -36,14 +33,16 @@ export const registerGenerateSearchcraftSchema = (server: McpServer) => {
                 // Validate index name
                 if (!isValidIndexName(index_name)) {
                     return createErrorResponse(
-                        "Index name must be URL-friendly (no spaces or special characters except hyphens and underscores)"
+                        "Index name must be URL-friendly (no spaces or special characters except hyphens and underscores)",
                     );
                 }
 
                 // Generate field definitions
                 const fields: Record<string, any> = {};
 
-                for (const [fieldName, analysis] of Object.entries(json_structure.fields)) {
+                for (const [fieldName, analysis] of Object.entries(
+                    json_structure.fields,
+                )) {
                     // Skip nested object fields for now (they would need flattening)
                     if (fieldName.includes(".")) {
                         debugLog(`Skipping nested field: ${fieldName}`);
@@ -77,47 +76,66 @@ export const registerGenerateSearchcraftSchema = (server: McpServer) => {
                         IndexFieldSchema.parse(fieldConfig);
                         fields[fieldName] = fieldConfig;
                     } catch (validationError) {
-                        debugLog(`Field validation failed for ${fieldName}: ${validationError}`);
+                        debugLog(
+                            `Field validation failed for ${fieldName}: ${validationError}`,
+                        );
                         // Skip invalid fields rather than failing entirely
                         continue;
                     }
                 }
 
                 if (Object.keys(fields).length === 0) {
-                    return createErrorResponse("No valid fields could be generated from the JSON structure");
+                    return createErrorResponse(
+                        "No valid fields could be generated from the JSON structure",
+                    );
                 }
 
                 // Determine search fields
-                const finalSearchFields = search_fields || json_structure.suggested_search_fields;
+                const finalSearchFields =
+                    search_fields || json_structure.suggested_search_fields;
 
                 // Validate that search fields exist and are text fields
-                const validSearchFields = finalSearchFields.filter(fieldName => {
-                    const field = fields[fieldName];
-                    if (!field) {
-                        debugLog(`Search field '${fieldName}' not found in generated fields`);
-                        return false;
-                    }
-                    if (field.type !== "text") {
-                        debugLog(`Search field '${fieldName}' is not a text field (type: ${field.type})`);
-                        return false;
-                    }
-                    return true;
-                });
+                const validSearchFields = finalSearchFields.filter(
+                    (fieldName) => {
+                        const field = fields[fieldName];
+                        if (!field) {
+                            debugLog(
+                                `Search field '${fieldName}' not found in generated fields`,
+                            );
+                            return false;
+                        }
+                        if (field.type !== "text") {
+                            debugLog(
+                                `Search field '${fieldName}' is not a text field (type: ${field.type})`,
+                            );
+                            return false;
+                        }
+                        return true;
+                    },
+                );
 
                 if (validSearchFields.length === 0) {
-                    return createErrorResponse("No valid text fields available for search_fields");
+                    return createErrorResponse(
+                        "No valid text fields available for search_fields",
+                    );
                 }
 
                 // Determine weight multipliers
-                const finalWeightMultipliers = weight_multipliers || json_structure.suggested_weight_multipliers;
+                const finalWeightMultipliers =
+                    weight_multipliers ||
+                    json_structure.suggested_weight_multipliers;
 
                 // Validate weight multipliers reference existing search fields
                 const validWeightMultipliers: Record<string, number> = {};
-                for (const [fieldName, weight] of Object.entries(finalWeightMultipliers)) {
+                for (const [fieldName, weight] of Object.entries(
+                    finalWeightMultipliers,
+                )) {
                     if (validSearchFields.includes(fieldName)) {
                         validWeightMultipliers[fieldName] = weight;
                     } else {
-                        debugLog(`Weight multiplier for '${fieldName}' ignored - not in search_fields`);
+                        debugLog(
+                            `Weight multiplier for '${fieldName}' ignored - not in search_fields`,
+                        );
                     }
                 }
 
@@ -125,13 +143,19 @@ export const registerGenerateSearchcraftSchema = (server: McpServer) => {
                 if (time_decay_field) {
                     const timeField = fields[time_decay_field];
                     if (!timeField) {
-                        return createErrorResponse(`Time decay field '${time_decay_field}' not found in schema`);
+                        return createErrorResponse(
+                            `Time decay field '${time_decay_field}' not found in schema`,
+                        );
                     }
                     if (timeField.type !== "datetime") {
-                        return createErrorResponse(`Time decay field '${time_decay_field}' must be a datetime field`);
+                        return createErrorResponse(
+                            `Time decay field '${time_decay_field}' must be a datetime field`,
+                        );
                     }
                     if (!timeField.fast || !timeField.indexed) {
-                        debugLog(`Updating time decay field '${time_decay_field}' to be fast and indexed`);
+                        debugLog(
+                            `Updating time decay field '${time_decay_field}' to be fast and indexed`,
+                        );
                         fields[time_decay_field].fast = true;
                         fields[time_decay_field].indexed = true;
                     }
@@ -177,16 +201,25 @@ export const registerGenerateSearchcraftSchema = (server: McpServer) => {
                             resource: {
                                 uri: `searchcraft://generated-schema/${index_name}/${Date.now()}`,
                                 mimeType: "application/json",
-                                text: JSON.stringify({
-                                    generated_at: new Date().toISOString(),
-                                    source_analysis: {
-                                        total_objects_analyzed: json_structure.total_objects_analyzed,
-                                        total_fields_found: Object.keys(json_structure.fields).length,
-                                        fields_included: Object.keys(fields).length,
-                                        search_fields_count: validSearchFields.length,
+                                text: JSON.stringify(
+                                    {
+                                        generated_at: new Date().toISOString(),
+                                        source_analysis: {
+                                            total_objects_analyzed:
+                                                json_structure.total_objects_analyzed,
+                                            total_fields_found: Object.keys(
+                                                json_structure.fields,
+                                            ).length,
+                                            fields_included:
+                                                Object.keys(fields).length,
+                                            search_fields_count:
+                                                validSearchFields.length,
+                                        },
+                                        searchcraft_schema: indexSchema,
                                     },
-                                    searchcraft_schema: indexSchema,
-                                }, null, 2),
+                                    null,
+                                    2,
+                                ),
                             },
                         },
                     ],
@@ -197,7 +230,7 @@ export const registerGenerateSearchcraftSchema = (server: McpServer) => {
                         ? error.message
                         : "Unknown error occurred";
                 return createErrorResponse(
-                    `Failed to generate Searchcraft schema: ${errorMessage}`
+                    `Failed to generate Searchcraft schema: ${errorMessage}`,
                 );
             }
         },

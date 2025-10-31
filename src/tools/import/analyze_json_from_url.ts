@@ -1,9 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import {
-    createErrorResponse,
-    debugLog,
-} from "../../helpers.js";
+import { createErrorResponse, debugLog } from "../../helpers.js";
 import { analyzeJsonStructure } from "./json-analyzer.js";
 
 export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
@@ -16,7 +13,15 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
         "Fetch JSON data from a URL and analyze its structure to understand field types and patterns for Searchcraft index schema generation",
         {
             path: z.string().url().describe("URL to fetch JSON data from"),
-            sample_size: z.number().int().positive().optional().default(10).describe("For arrays, number of items to analyze (default: 10)"),
+            sample_size: z
+                .number()
+                .int()
+                .positive()
+                .optional()
+                .default(10)
+                .describe(
+                    "For arrays, number of items to analyze (default: 10)",
+                ),
         },
         async ({ path, sample_size = 10 }) => {
             debugLog("[Tool Call] analyze_json_from_url");
@@ -34,7 +39,9 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
 
                 // Security check - only allow HTTP/HTTPS
                 if (!["http:", "https:"].includes(url.protocol)) {
-                    return createErrorResponse("Only HTTP and HTTPS URLs are supported");
+                    return createErrorResponse(
+                        "Only HTTP and HTTPS URLs are supported",
+                    );
                 }
 
                 debugLog(`Fetching JSON from URL: ${trimmedPath}`);
@@ -42,7 +49,7 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
                 // Fetch JSON data
                 const response = await fetch(trimmedPath, {
                     headers: {
-                        "Accept": "application/json",
+                        Accept: "application/json",
                         "User-Agent": "Searchcraft-MCP-Server/1.0",
                     },
                     // Add timeout
@@ -51,13 +58,15 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
 
                 if (!response.ok) {
                     return createErrorResponse(
-                        `Failed to fetch URL: ${response.status} ${response.statusText}`
+                        `Failed to fetch URL: ${response.status} ${response.statusText}`,
                     );
                 }
 
                 const contentType = response.headers.get("content-type");
                 if (!contentType?.includes("application/json")) {
-                    debugLog(`Warning: Content-Type is ${contentType}, expected application/json`);
+                    debugLog(
+                        `Warning: Content-Type is ${contentType}, expected application/json`,
+                    );
                 }
 
                 const jsonText = await response.text();
@@ -67,7 +76,7 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
                     jsonData = JSON.parse(jsonText);
                 } catch (parseError) {
                     return createErrorResponse(
-                        `Invalid JSON received from URL: ${parseError instanceof Error ? parseError.message : "Parse error"}`
+                        `Invalid JSON received from URL: ${parseError instanceof Error ? parseError.message : "Parse error"}`,
                     );
                 }
 
@@ -81,16 +90,21 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
                             resource: {
                                 uri: `searchcraft://json-analysis-url/${encodeURIComponent(trimmedPath)}/${Date.now()}`,
                                 mimeType: "application/json",
-                                text: JSON.stringify({
-                                    source: {
-                                        type: "url",
-                                        url: trimmedPath,
-                                        fetched_at: new Date().toISOString(),
-                                        content_type: contentType,
-                                        response_size: jsonText.length,
+                                text: JSON.stringify(
+                                    {
+                                        source: {
+                                            type: "url",
+                                            url: trimmedPath,
+                                            fetched_at:
+                                                new Date().toISOString(),
+                                            content_type: contentType,
+                                            response_size: jsonText.length,
+                                        },
+                                        analysis,
                                     },
-                                    analysis,
-                                }, null, 2),
+                                    null,
+                                    2,
+                                ),
                             },
                         },
                     ],
@@ -101,7 +115,7 @@ export const registerAnalyzeJsonFromUrl = (server: McpServer) => {
                         ? error.message
                         : "Unknown error occurred";
                 return createErrorResponse(
-                    `Failed to analyze JSON from URL: ${errorMessage}`
+                    `Failed to analyze JSON from URL: ${errorMessage}`,
                 );
             }
         },

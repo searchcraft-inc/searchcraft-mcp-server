@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
     createErrorResponse,
     debugLog,
+    getSearchcraftConfig,
     makeSearchcraftRequest,
 } from "../../../helpers.js";
 
@@ -17,25 +18,17 @@ export const registerGetAllIndexStats = (server: McpServer) => {
         async () => {
             debugLog("[Tool Call] get_all_index_stats");
             try {
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse(
-                        "ENDPOINT_URL environment variable is required",
-                    );
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse(
-                        "ADMIN_KEY environment variable is required",
-                    );
-                }
+                const { endpointUrl, apiKey } = config;
 
                 const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/stats`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "GET",
-                    adminKey,
+                    apiKey,
                 );
 
                 return {

@@ -227,7 +227,9 @@ export const FederationSchema = z.object({
 
 // Schema analysis and generation schemas
 export const JsonSourceSchema = z.object({
-    source: z.enum(["url", "file"]).describe("Source type: URL or local file path"),
+    source: z
+        .enum(["url", "file"])
+        .describe("Source type: URL or local file path"),
     path: z.string().describe("URL or file path to the JSON data"),
     sample_size: z
         .number()
@@ -239,59 +241,138 @@ export const JsonSourceSchema = z.object({
 });
 
 export const JsonFieldAnalysisSchema = z.object({
-    type: z.enum(["string", "number", "boolean", "array", "object", "null"]).describe("JSON type"),
-    searchcraft_type: z.enum(["text", "datetime", "bool", "f64", "u64", "facet"]).describe("Recommended Searchcraft field type"),
+    type: z
+        .enum(["string", "number", "boolean", "array", "object", "null"])
+        .describe("JSON type"),
+    searchcraft_type: z
+        .enum(["text", "datetime", "bool", "f64", "u64", "facet"])
+        .describe("Recommended Searchcraft field type"),
     is_array: z.boolean().describe("Whether this field contains array values"),
     sample_values: z.array(z.any()).describe("Sample values from the JSON"),
-    is_required: z.boolean().describe("Whether this field appears in all analyzed objects"),
-    suggested_config: z.object({
-        stored: z.boolean().describe("Suggested stored setting"),
-        indexed: z.boolean().describe("Suggested indexed setting"),
-        fast: z.boolean().describe("Suggested fast setting"),
-        multi: z.boolean().describe("Suggested multi setting"),
-    }).describe("Suggested field configuration"),
+    is_required: z
+        .boolean()
+        .describe("Whether this field appears in all analyzed objects"),
+    suggested_config: z
+        .object({
+            stored: z.boolean().describe("Suggested stored setting"),
+            indexed: z.boolean().describe("Suggested indexed setting"),
+            fast: z.boolean().describe("Suggested fast setting"),
+            multi: z.boolean().describe("Suggested multi setting"),
+        })
+        .describe("Suggested field configuration"),
 });
 
 export const JsonStructureAnalysisSchema = z.object({
-    total_objects_analyzed: z.number().int().describe("Number of JSON objects analyzed"),
-    fields: z.record(JsonFieldAnalysisSchema).describe("Analysis of each field found"),
-    suggested_search_fields: z.array(z.string()).describe("Recommended fields for search_fields array"),
-    suggested_weight_multipliers: z.record(z.number()).describe("Recommended weight multipliers"),
+    total_objects_analyzed: z
+        .number()
+        .int()
+        .describe("Number of JSON objects analyzed"),
+    fields: z
+        .record(JsonFieldAnalysisSchema)
+        .describe("Analysis of each field found"),
+    suggested_search_fields: z
+        .array(z.string())
+        .describe("Recommended fields for search_fields array"),
+    suggested_weight_multipliers: z
+        .record(z.number())
+        .describe("Recommended weight multipliers"),
 });
 
 export const GenerateSchemaRequestSchema = z.object({
-    json_structure: JsonStructureAnalysisSchema.describe("Analyzed JSON structure"),
+    json_structure: JsonStructureAnalysisSchema.describe(
+        "Analyzed JSON structure",
+    ),
     index_name: z.string().describe("Name for the new index"),
-    search_fields: z.array(z.string()).optional().describe("Override default search fields"),
-    weight_multipliers: z.record(z.number().min(0.0).max(10.0)).optional().describe("Override default weight multipliers"),
+    search_fields: z
+        .array(z.string())
+        .optional()
+        .describe("Override default search fields"),
+    weight_multipliers: z
+        .record(z.number().min(0.0).max(10.0))
+        .optional()
+        .describe("Override default weight multipliers"),
     language: z.string().optional().describe("Language code for the index"),
-    auto_commit_delay: z.number().optional().describe("Auto commit delay in seconds"),
-    exclude_stop_words: z.boolean().optional().describe("Whether to exclude stop words"),
-    time_decay_field: z.string().optional().describe("Field to use for time decay"),
+    auto_commit_delay: z
+        .number()
+        .optional()
+        .describe("Auto commit delay in seconds"),
+    exclude_stop_words: z
+        .boolean()
+        .optional()
+        .describe("Whether to exclude stop words"),
+    time_decay_field: z
+        .string()
+        .optional()
+        .describe("Field to use for time decay"),
 });
 
 export const CreateIndexFromJsonSchema = z.object({
-    source: z.enum(["url", "file"]).describe("Source type: URL or local file path"),
+    source: z
+        .enum(["url", "file"])
+        .describe("Source type: URL or local file path"),
     path: z.string().describe("URL or file path to the JSON data"),
     index_name: z.string().describe("Name for the new index"),
-    sample_size: z.number().int().positive().optional().default(10).describe("For arrays, number of items to analyze"),
-    search_fields: z.array(z.string()).optional().describe("Override default search fields"),
-    weight_multipliers: z.record(z.number().min(0.0).max(10.0)).optional().describe("Override default weight multipliers"),
+    sample_size: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .default(10)
+        .describe("For arrays, number of items to analyze"),
+    search_fields: z
+        .array(z.string())
+        .optional()
+        .describe("Override default search fields"),
+    weight_multipliers: z
+        .record(z.number().min(0.0).max(10.0))
+        .optional()
+        .describe("Override default weight multipliers"),
     language: z.string().optional().describe("Language code for the index"),
-    auto_commit_delay: z.number().optional().describe("Auto commit delay in seconds"),
-    exclude_stop_words: z.boolean().optional().describe("Whether to exclude stop words"),
-    time_decay_field: z.string().optional().describe("Field to use for time decay"),
-    override_if_exists: z.boolean().optional().default(false).describe("Whether to override existing index"),
+    auto_commit_delay: z
+        .number()
+        .optional()
+        .describe("Auto commit delay in seconds"),
+    exclude_stop_words: z
+        .boolean()
+        .optional()
+        .describe("Whether to exclude stop words"),
+    time_decay_field: z
+        .string()
+        .optional()
+        .describe("Field to use for time decay"),
+    override_if_exists: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("Whether to override existing index"),
 });
 
 export const CreateViteAppSchema = z.object({
-    data_source: z.enum(["url", "file"]).describe("Source type: URL or local file path"),
+    data_source: z
+        .enum(["url", "file"])
+        .describe("Source type: URL or local file path"),
     data_path: z.string().describe("URL or file path to the JSON data"),
-    app_name: z.string().describe("Name for the generated app (will be used for directory name)"),
+    app_name: z
+        .string()
+        .describe(
+            "Name for the generated app (will be used for directory name)",
+        ),
     VITE_ENDPOINT_URL: z.string().describe("The Searchcraft endpoint URL"),
     VITE_INDEX_NAME: z.string().describe("The Searchcraft index name"),
     VITE_READ_KEY: z.string().describe("The Searchcraft read key"),
-    sample_size: z.number().int().positive().optional().default(50).describe("For arrays, number of items to analyze"),
-    search_fields: z.array(z.string()).optional().describe("Override default search fields"),
-    weight_multipliers: z.record(z.number().min(0.0).max(10.0)).optional().describe("Override default weight multipliers"),
+    sample_size: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .default(50)
+        .describe("For arrays, number of items to analyze"),
+    search_fields: z
+        .array(z.string())
+        .optional()
+        .describe("Override default search fields"),
+    weight_multipliers: z
+        .record(z.number().min(0.0).max(10.0))
+        .optional()
+        .describe("Override default weight multipliers"),
 });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
     createErrorResponse,
     debugLog,
+    getSearchcraftConfig,
     makeSearchcraftRequest,
 } from "../../../helpers.js";
 import { KeySchema } from "../../schemas.js";
@@ -22,25 +23,17 @@ export const registerUpdateKey = (server: McpServer) => {
         async ({ key, key_data }) => {
             debugLog("[Tool Call] update_key");
             try {
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse(
-                        "ENDPOINT_URL environment variable is required",
-                    );
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse(
-                        "ADMIN_KEY environment variable is required",
-                    );
-                }
+                const { endpointUrl, apiKey } = config;
 
                 const endpoint = `${endpointUrl.replace(/\/$/, "")}/auth/key/${key}`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "POST",
-                    adminKey,
+                    apiKey,
                     key_data,
                 );
 

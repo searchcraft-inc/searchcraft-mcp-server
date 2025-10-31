@@ -1,9 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
-    debugLog,
-    makeSearchcraftRequest,
     createErrorResponse,
+    debugLog,
+    getSearchcraftConfig,
+    makeSearchcraftRequest,
 } from "../../../helpers.js";
 
 export const registerGetIndexSynonyms = (server: McpServer) => {
@@ -22,25 +23,17 @@ export const registerGetIndexSynonyms = (server: McpServer) => {
         async ({ index_name }) => {
             debugLog("[Tool Call] get_index_synonyms");
             try {
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse(
-                        "ENDPOINT_URL environment variable is required",
-                    );
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse(
-                        "ADMIN_KEY environment variable is required",
-                    );
-                }
+                const { endpointUrl, apiKey } = config;
 
                 const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/synonyms`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "GET",
-                    adminKey,
+                    apiKey,
                 );
 
                 return {

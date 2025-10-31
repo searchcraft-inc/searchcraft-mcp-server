@@ -1,9 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
-    debugLog,
-    makeSearchcraftRequest,
     createErrorResponse,
+    debugLog,
+    getSearchcraftConfig,
+    makeSearchcraftRequest,
 } from "../../../helpers.js";
 import { FederationSchema } from "../../schemas.js";
 
@@ -26,25 +27,17 @@ export const registerUpdateFederation = (server: McpServer) => {
         async ({ federation_name, federation_data }) => {
             debugLog("[Tool Call] update_federation");
             try {
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse(
-                        "ENDPOINT_URL environment variable is required",
-                    );
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse(
-                        "ADMIN_KEY environment variable is required",
-                    );
-                }
+                const { endpointUrl, apiKey } = config;
 
                 const endpoint = `${endpointUrl.replace(/\/$/, "")}/federation/${federation_name}`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "PUT",
-                    adminKey,
+                    apiKey,
                     federation_data,
                 );
 

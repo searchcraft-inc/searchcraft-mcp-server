@@ -45,8 +45,11 @@ export const makeSearchcraftRequest = async (
         const errorText = await response.text();
 
         // Enhanced error logging for document validation issues
-        if (endpoint.includes('/documents') && errorText.includes('validation')) {
-            debugLog(`Searchcraft document validation error:`);
+        if (
+            endpoint.includes("/documents") &&
+            errorText.includes("validation")
+        ) {
+            debugLog("Searchcraft document validation error:");
             debugLog(`  Status: ${response.status} ${response.statusText}`);
             debugLog(`  Response: ${errorText}`);
             debugLog(`  Request endpoint: ${endpoint}`);
@@ -73,6 +76,38 @@ export const createErrorResponse = (message: string) => ({
     isError: true,
 });
 
+/**
+ * Gets and validates required Searchcraft environment variables
+ * @returns Object with endpointUrl and apiKey, or error response if validation fails
+ */
+export const getSearchcraftConfig = ():
+    | { endpointUrl: string; apiKey: string; error?: never }
+    | {
+          endpointUrl?: never;
+          apiKey?: never;
+          error: ReturnType<typeof createErrorResponse>;
+      } => {
+    const endpointUrl = process.env.ENDPOINT_URL;
+    const apiKey = process.env.CORE_API_KEY;
+
+    if (!endpointUrl) {
+        return {
+            error: createErrorResponse(
+                "ENDPOINT_URL environment variable is required",
+            ),
+        };
+    }
+    if (!apiKey) {
+        return {
+            error: createErrorResponse(
+                "CORE_API_KEY environment variable is required",
+            ),
+        };
+    }
+
+    return { endpointUrl, apiKey };
+};
+
 // Define log level hierarchy (lower numbers = higher priority)
 const LOG_LEVELS = {
     ERROR: 0,
@@ -92,10 +127,7 @@ function shouldLog(messageLevel: LogLevel, configuredLevel: LogLevel): boolean {
     return LOG_LEVELS[messageLevel] <= LOG_LEVELS[configuredLevel];
 }
 
-export function debugLog(
-    message: string,
-    level: LogLevel = "LOG",
-) {
+export function debugLog(message: string, level: LogLevel = "LOG") {
     // Check if debugging is enabled at all
     if (!process.env.DEBUG || process.env.DEBUG.toLowerCase() !== "true") {
         return;
@@ -111,7 +143,7 @@ export function debugLog(
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] [${level}] ${message}`;
 
-    process.stderr.write(logMessage + '\n');
+    process.stderr.write(`${logMessage} \n`);
 }
 
 /**
@@ -119,7 +151,10 @@ export function debugLog(
  * This addresses the issue where integer values like 1 cause validation errors
  * when sent to Searchcraft for fields marked as f64 in the schema.
  */
-export const prepareDocumentsForSearchcraft = (documents: any[], schema: Record<string, any>): any[] => {
+export const prepareDocumentsForSearchcraft = (
+    documents: Record<string, unknown>[],
+    schema: Record<string, { type?: string; [key: string]: unknown }>,
+): Record<string, unknown>[] => {
     // Find f64 fields in the schema
     const f64Fields = Object.entries(schema)
         .filter(([_, config]) => config?.type === "f64")
@@ -129,10 +164,11 @@ export const prepareDocumentsForSearchcraft = (documents: any[], schema: Record<
         return documents; // No f64 fields, return as-is
     }
 
-    return documents.map(doc => {
+    return documents.map((doc) => {
         const prepared = { ...doc };
 
-        f64Fields.forEach(fieldName => {
+        // biome-ignore lint/complexity/noForEach: its fine.
+        f64Fields.forEach((fieldName) => {
             const value = prepared[fieldName];
             if (typeof value === "number" && Number.isInteger(value)) {
                 // Convert integer to a value that will serialize with decimal point
@@ -140,16 +176,16 @@ export const prepareDocumentsForSearchcraft = (documents: any[], schema: Record<
                 prepared[fieldName] = {
                     valueOf: () => value,
                     toJSON: () => `${value}.0`,
-                    toString: () => `${value}.0`
+                    toString: () => `${value}.0`,
                 };
             } else if (Array.isArray(value)) {
                 // Handle arrays of numbers
-                prepared[fieldName] = value.map(v => {
+                prepared[fieldName] = value.map((v) => {
                     if (typeof v === "number" && Number.isInteger(v)) {
                         return {
                             valueOf: () => v,
                             toJSON: () => `${v}.0`,
-                            toString: () => `${v}.0`
+                            toString: () => `${v}.0`,
                         };
                     }
                     return v;

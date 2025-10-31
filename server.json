@@ -1,0 +1,100 @@
+{
+    "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+    "name": "io.github.searchcraft-inc/searchcraft-mcp-server",
+    "description": "MCP Server for Searchcraft - manage indexes, documents, federations, keys, analytics, and search.",
+    "repository": {
+        "url": "https://github.com/searchcraft-inc/searchcraft-mcp-server",
+        "source": "github"
+    },
+    "version": "0.2.0",
+    "packages": [
+        {
+            "registryType": "npm",
+            "registryBaseUrl": "https://registry.npmjs.org",
+            "identifier": "searchcraft-mcp-server",
+            "version": "0.2.0",
+            "transport": {
+                "type": "stdio",
+                "command": "searchcraft-stdio"
+            },
+            "environmentVariables": [
+                {
+                    "description": "The endpoint URL of your Searchcraft cluster (e.g., https://your-cluster.search.searchcraft.io or https://localhost:8000)",
+                    "isRequired": true,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "ENDPOINT_URL"
+                },
+                {
+                    "description": "The Searchcraft API key of your Searchcraft cluster. Must match the permissions required by the tools you are using.",
+                    "isRequired": true,
+                    "format": "string",
+                    "isSecret": true,
+                    "name": "CORE_API_KEY"
+                },
+                {
+                    "description": "User agent string for API requests",
+                    "isRequired": false,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "USER_AGENT"
+                },
+                {
+                    "description": "Enable debug logging",
+                    "isRequired": false,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "DEBUG"
+                }
+            ]
+        },
+        {
+            "registryType": "npm",
+            "registryBaseUrl": "https://registry.npmjs.org",
+            "identifier": "searchcraft-mcp-server",
+            "version": "0.2.0",
+            "transport": {
+                "type": "streamable-http",
+                "command": "searchcraft",
+                "url": "http://localhost:3100/mcp"
+            },
+            "environmentVariables": [
+                {
+                    "description": "HTTP server port (default: 3100)",
+                    "isRequired": false,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "PORT"
+                },
+                {
+                    "description": "The endpoint URL of your Searchcraft cluster (e.g., https://your-cluster.search.searchcraft.io or https://localhost:8000)",
+                    "isRequired": true,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "ENDPOINT_URL"
+                },
+                {
+                    "description": "The Searchcraft API key of your Searchcraft cluster. Must match the permissions required by the tools you are using.",
+                    "isRequired": true,
+                    "format": "string",
+                    "isSecret": true,
+                    "name": "CORE_API_KEY"
+                },
+                {
+                    "description": "User agent string for API requests",
+                    "isRequired": false,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "USER_AGENT"
+                },
+                {
+                    "description": "Enable debug logging",
+                    "isRequired": false,
+                    "format": "string",
+                    "isSecret": false,
+                    "name": "DEBUG"
+                }
+            ]
+        }
+    ]
+}

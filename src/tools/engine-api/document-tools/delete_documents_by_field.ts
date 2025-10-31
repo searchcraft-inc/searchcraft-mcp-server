@@ -1,10 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
     createErrorResponse,
     debugLog,
+    getSearchcraftConfig,
     makeSearchcraftRequest,
 } from "../../../helpers.js";
-import { z } from "zod";
 
 export const registerDeleteDocumentsByField = (server: McpServer) => {
     /**
@@ -27,25 +28,17 @@ export const registerDeleteDocumentsByField = (server: McpServer) => {
         async ({ index_name, field_match }) => {
             debugLog("[Tool Call] delete_documents_by_field");
             try {
-                const endpointUrl = process.env.ENDPOINT_URL;
-                const adminKey = process.env.ADMIN_KEY;
-
-                if (!endpointUrl) {
-                    return createErrorResponse(
-                        "ENDPOINT_URL environment variable is required",
-                    );
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
-                if (!adminKey) {
-                    return createErrorResponse(
-                        "ADMIN_KEY environment variable is required",
-                    );
-                }
+                const { endpointUrl, apiKey } = config;
 
                 const endpoint = `${endpointUrl.replace(/\/$/, "")}/index/${index_name}/documents`;
                 const response = await makeSearchcraftRequest(
                     endpoint,
                     "DELETE",
-                    adminKey,
+                    apiKey,
                     field_match,
                 );
 

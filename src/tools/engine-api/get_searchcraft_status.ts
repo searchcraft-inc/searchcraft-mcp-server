@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { debugLog } from "../../helpers.js";
+import { debugLog, getSearchcraftConfig } from "../../helpers.js";
 
 /**
  * Tool: get_searchcraft_status
@@ -15,9 +15,13 @@ export const registerGetSearchcraftStatus = (server: McpServer) => {
         {},
         async () => {
             debugLog("[Tool Call] get-searchcraft-status");
-            const response = await fetch(
-                `${process.env.ENDPOINT_URL}/healthcheck`,
-            );
+            const config = getSearchcraftConfig();
+            if (config.error) {
+                return config.error;
+            }
+            const { endpointUrl } = config;
+
+            const response = await fetch(`${endpointUrl}/healthcheck`);
             const responseJsonAsText = await response.text();
             return {
                 content: [

@@ -1,5 +1,5 @@
+import { readFileSync } from "node:fs";
 import * as esbuild from "esbuild";
-import { readFileSync } from "fs";
 
 // Read package.json to get version
 const packageJson = JSON.parse(readFileSync("package.json", "utf-8"));
@@ -15,7 +15,7 @@ async function build() {
             sourcemap: true,
             tsconfig: "tsconfig.json",
             define: {
-                "__PACKAGE_VERSION__": JSON.stringify(packageJson.version),
+                __PACKAGE_VERSION__: JSON.stringify(packageJson.version),
             },
             external: [
                 "@modelcontextprotocol/*",
@@ -36,13 +36,9 @@ async function build() {
             sourcemap: true,
             tsconfig: "tsconfig.json",
             define: {
-                "__PACKAGE_VERSION__": JSON.stringify(packageJson.version),
+                __PACKAGE_VERSION__: JSON.stringify(packageJson.version),
             },
-            external: [
-                "@modelcontextprotocol/*",
-                "zod",
-                "dotenv/config",
-            ],
+            external: ["@modelcontextprotocol/*", "zod", "dotenv/config"],
             entryPoints: ["src/stdio-server.ts"],
             outfile: "dist/stdio-server.js",
         });
@@ -50,7 +46,9 @@ async function build() {
         console.log("✅ Build complete!");
         console.log("📁 Output:");
         console.log("  - dist/server.js (HTTP server)");
-        console.log("  - dist/stdio-server.js (stdio server for Claude Desktop)");
+        console.log(
+            "  - dist/stdio-server.js (stdio server for Claude Desktop)",
+        );
     } catch (error) {
         console.error("❌ Build failed:", error);
         process.exit(1);

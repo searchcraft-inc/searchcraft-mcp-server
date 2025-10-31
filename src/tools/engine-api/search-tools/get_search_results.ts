@@ -1,6 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { debugLog, performSearchcraftRequest } from "../../../helpers.js";
+import {
+    debugLog,
+    getSearchcraftConfig,
+    performSearchcraftRequest,
+} from "../../../helpers.js";
 import type { SearchcraftQuery, SearchcraftQueryPart } from "../../../types.js";
 
 /**
@@ -132,20 +136,12 @@ export const registerGetSearchResults = (server: McpServer) => {
         }) => {
             debugLog("[Tool Call] get-search-results");
             try {
-                const baseUrl = process.env.ENDPOINT_URL;
-                const federation = process.env.FEDERATION_NAME;
-
-                if (!baseUrl) {
-                    return {
-                        content: [
-                            {
-                                type: "text",
-                                text: "❌ Error: ENDPOINT_URL environment variable is required",
-                            },
-                        ],
-                        isError: true,
-                    };
+                const config = getSearchcraftConfig();
+                if (config.error) {
+                    return config.error;
                 }
+                const { endpointUrl: baseUrl } = config;
+                const federation = process.env.FEDERATION_NAME;
 
                 if (!readKey) {
                     return {

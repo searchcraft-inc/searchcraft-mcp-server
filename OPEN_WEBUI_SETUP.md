@@ -75,7 +75,7 @@ docker compose up -d
 5. Click on it and configure the valves:
    - `MCP_SERVER_URL`: `http://host.docker.internal:3100/mcp`
    - `ENDPOINT_URL`: Your Searchcraft cluster URL
-   - `ADMIN_KEY`: Your Searchcraft admin key
+   - `CORE_API_KEY`: Your Searchcraft admin key
    - `ENABLE_MCP_TOOLS`: `true`
 
 ### Step 6: Test the Integration
@@ -124,7 +124,7 @@ docker run -d -p 3000:8080 \
 
 - **MCP_SERVER_URL**: URL of your Searchcraft MCP server (default: `http://localhost:3100/mcp`)
 - **ENDPOINT_URL**: Your Searchcraft cluster endpoint URL
-- **ADMIN_KEY**: Your Searchcraft admin key for full access
+- **CORE_API_KEY**: Your Searchcraft API key
 - **ENABLE_MCP_TOOLS**: Enable/disable MCP integration (default: `true`)
 
 ### Environment Variables
@@ -134,7 +134,7 @@ For the Searchcraft MCP server, you can also set:
 ```bash
 # In your .env file
 ENDPOINT_URL=https://your-cluster.searchcraft.io
-ADMIN_KEY=your_admin_key_here
+CORE_API_KEY=your_api_key_here
 ```
 
 ## How It Works
