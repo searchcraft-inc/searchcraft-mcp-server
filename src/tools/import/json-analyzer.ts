@@ -24,8 +24,18 @@ export interface JsonStructureAnalysis {
 /**
  * Recursively finds all arrays in an object with their paths and depths
  */
-export function findArraysInObject(obj: any, path: string = "", depth: number = 0, maxDepth: number = 3): Array<{path: string, array: any[], depth: number, length: number}> {
-    const arrays: Array<{path: string, array: any[], depth: number, length: number}> = [];
+export function findArraysInObject(
+    obj: any,
+    path = "",
+    depth = 0,
+    maxDepth = 3,
+): Array<{ path: string; array: any[]; depth: number; length: number }> {
+    const arrays: Array<{
+        path: string;
+        array: any[];
+        depth: number;
+        length: number;
+    }> = [];
 
     if (depth > maxDepth) return arrays;
 
@@ -38,10 +48,17 @@ export function findArraysInObject(obj: any, path: string = "", depth: number = 
                     path: currentPath,
                     array: value,
                     depth,
-                    length: value.length
+                    length: value.length,
                 });
             } else if (typeof value === "object" && value !== null) {
-                arrays.push(...findArraysInObject(value, currentPath, depth + 1, maxDepth));
+                arrays.push(
+                    ...findArraysInObject(
+                        value,
+                        currentPath,
+                        depth + 1,
+                        maxDepth,
+                    ),
+                );
             }
         }
     }
@@ -55,7 +72,7 @@ export function findArraysInObject(obj: any, path: string = "", depth: number = 
 export function flattenDocumentForSearchcraft(doc: any): any {
     const flattened: any = {};
 
-    function flattenObject(obj: any, prefix: string = ""): void {
+    function flattenObject(obj: any, prefix = ""): void {
         for (const [key, value] of Object.entries(obj)) {
             const fieldName = prefix ? `${prefix}.${key}` : key;
 
@@ -72,7 +89,9 @@ export function flattenDocumentForSearchcraft(doc: any): any {
                         continue;
                     } else {
                         // Array of primitives - clean and keep, with optional type conversion
-                        const cleanArray = value.filter(v => v !== null && v !== undefined);
+                        const cleanArray = value.filter(
+                            (v) => v !== null && v !== undefined,
+                        );
                         if (cleanArray.length > 0) {
                             // Keep array as-is - we'll handle f64 conversion at JSON serialization time
                             flattened[fieldName] = cleanArray;
@@ -104,7 +123,11 @@ export function flattenDocumentForSearchcraft(doc: any): any {
                 } else {
                     // For other types, convert to string if possible
                     const stringValue = String(value);
-                    if (stringValue && stringValue !== "undefined" && stringValue !== "null") {
+                    if (
+                        stringValue &&
+                        stringValue !== "undefined" &&
+                        stringValue !== "null"
+                    ) {
                         flattened[fieldName] = stringValue;
                     }
                 }
@@ -115,7 +138,6 @@ export function flattenDocumentForSearchcraft(doc: any): any {
     flattenObject(doc);
     return flattened;
 }
-
 
 /**
  * Extracts the best array from JSON data using the same logic as analyzeJsonStructure
@@ -149,7 +171,10 @@ export function extractContentArray(jsonData: any): any[] {
 /**
  * Analyzes JSON structure and provides recommendations for Searchcraft schema
  */
-export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): JsonStructureAnalysis {
+export function analyzeJsonStructure(
+    jsonData: any,
+    sampleSize = 10,
+): JsonStructureAnalysis {
     //debugLog(`Starting JSON structure analysis with sample size: ${sampleSize}`);
 
     // Extract the best array and take a sample for analysis
@@ -163,12 +188,15 @@ export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): Js
     //debugLog(`Analyzing ${objects.length} objects`);
 
     // Collect all field information
-    const fieldStats: Record<string, {
-        types: Set<string>;
-        values: any[];
-        occurrences: number;
-        isArrayField: boolean;
-    }> = {};
+    const fieldStats: Record<
+        string,
+        {
+            types: Set<string>;
+            values: any[];
+            occurrences: number;
+            isArrayField: boolean;
+        }
+    > = {};
 
     // Analyze each object
     for (const obj of objects) {
@@ -211,7 +239,11 @@ export function analyzeJsonStructure(jsonData: any, sampleSize: number = 10): Js
 /**
  * Recursively analyze an object and collect field statistics
  */
-function analyzeObject(obj: any, fieldStats: Record<string, any>, prefix: string = ""): void {
+function analyzeObject(
+    obj: any,
+    fieldStats: Record<string, any>,
+    prefix = "",
+): void {
     for (const [key, value] of Object.entries(obj)) {
         const fieldName = prefix ? `${prefix}.${key}` : key;
 
@@ -231,7 +263,8 @@ function analyzeObject(obj: any, fieldStats: Record<string, any>, prefix: string
             fieldStats[fieldName].types.add("array");
 
             // Analyze array elements
-            for (const item of value.slice(0, 5)) { // Sample first 5 items
+            for (const item of value.slice(0, 5)) {
+                // Sample first 5 items
                 if (item !== null && item !== undefined) {
                     fieldStats[fieldName].types.add(typeof item);
                     fieldStats[fieldName].values.push(item);
@@ -257,23 +290,50 @@ function analyzeField(fieldName: string, stats: any): FieldAnalysis {
     const types = Array.from(stats.types);
 
     // Only make "id" and title-related fields required
-    const requiredFieldPatterns = ["id", "title", "name", "headline", "heading"];
-    const isRequired = requiredFieldPatterns.some(pattern =>
-        fieldName.toLowerCase().includes(pattern.toLowerCase())
+    const requiredFieldPatterns = [
+        "id",
+        "title",
+        "name",
+        "headline",
+        "heading",
+    ];
+    const isRequired = requiredFieldPatterns.some((pattern) =>
+        fieldName.toLowerCase().includes(pattern.toLowerCase()),
     );
 
     const isArray = stats.isArrayField;
 
     // Determine primary type (excluding null)
-    const nonNullTypes = types.filter(t => t !== "null");
-    const primaryType: "string" | "number" | "boolean" | "array" | "object" | "null" =
-        nonNullTypes.length > 0 ? nonNullTypes[0] as "string" | "number" | "boolean" | "array" | "object" : "null";
+    const nonNullTypes = types.filter((t) => t !== "null");
+    const primaryType:
+        | "string"
+        | "number"
+        | "boolean"
+        | "array"
+        | "object"
+        | "null" =
+        nonNullTypes.length > 0
+            ? (nonNullTypes[0] as
+                  | "string"
+                  | "number"
+                  | "boolean"
+                  | "array"
+                  | "object")
+            : "null";
 
     // Determine Searchcraft type
-    const searchcraftType = determineSearchcraftType(primaryType, stats.values, fieldName);
+    const searchcraftType = determineSearchcraftType(
+        primaryType,
+        stats.values,
+        fieldName,
+    );
 
     // Suggest configuration
-    const suggestedConfig = suggestFieldConfig(searchcraftType, fieldName, isArray);
+    const suggestedConfig = suggestFieldConfig(
+        searchcraftType,
+        fieldName,
+        isArray,
+    );
 
     return {
         type: primaryType,
@@ -291,7 +351,7 @@ function analyzeField(fieldName: string, stats: any): FieldAnalysis {
 function determineSearchcraftType(
     jsonType: string,
     sampleValues: any[],
-    fieldName: string
+    fieldName: string,
 ): "text" | "datetime" | "bool" | "f64" | "u64" | "facet" {
     switch (jsonType) {
         case "boolean":
@@ -300,14 +360,32 @@ function determineSearchcraftType(
         case "number":
             // Fields that commonly contain decimals should always be f64
             const decimalFieldPatterns = [
-                "percentage", "percent", "rate", "ratio", "price", "cost", "amount",
-                "discount", "height", "width", "depth", "discountPercentage",
-                "dimension", "size", "length", "distance", "temperature", "lat", "lng",
-                "latitude", "longitude", "coord"
+                "percentage",
+                "percent",
+                "rate",
+                "ratio",
+                "price",
+                "cost",
+                "amount",
+                "discount",
+                "height",
+                "width",
+                "depth",
+                "discountPercentage",
+                "dimension",
+                "size",
+                "length",
+                "distance",
+                "temperature",
+                "lat",
+                "lng",
+                "latitude",
+                "longitude",
+                "coord",
             ];
 
-            const isLikelyDecimalField = decimalFieldPatterns.some(pattern =>
-                fieldName.toLowerCase().includes(pattern.toLowerCase())
+            const isLikelyDecimalField = decimalFieldPatterns.some((pattern) =>
+                fieldName.toLowerCase().includes(pattern.toLowerCase()),
             );
 
             if (isLikelyDecimalField) {
@@ -315,8 +393,8 @@ function determineSearchcraftType(
             }
 
             // Check if all numbers are integers for other fields
-            const allIntegers = sampleValues.every(v =>
-                typeof v === "number" && Number.isInteger(v) && v >= 0
+            const allIntegers = sampleValues.every(
+                (v) => typeof v === "number" && Number.isInteger(v) && v >= 0,
             );
             return allIntegers ? "u64" : "f64";
 
@@ -342,9 +420,16 @@ function determineSearchcraftType(
  * Check if field contains date values
  */
 function isDateField(sampleValues: any[], fieldName: string): boolean {
-    const dateFieldNames = ["date", "time", "created", "updated", "published", "modified"];
-    const hasDateName = dateFieldNames.some(name =>
-        fieldName.toLowerCase().includes(name)
+    const dateFieldNames = [
+        "date",
+        "time",
+        "created",
+        "updated",
+        "published",
+        "modified",
+    ];
+    const hasDateName = dateFieldNames.some((name) =>
+        fieldName.toLowerCase().includes(name),
     );
 
     if (!hasDateName) return false;
@@ -357,9 +442,9 @@ function isDateField(sampleValues: any[], fieldName: string): boolean {
         /^\d{13}$/, // Unix timestamp in milliseconds (13 digits)
     ];
 
-    return sampleValues.some(value => {
+    return sampleValues.some((value) => {
         if (typeof value === "string") {
-            return datePatterns.some(pattern => pattern.test(value));
+            return datePatterns.some((pattern) => pattern.test(value));
         }
         if (typeof value === "number") {
             // Check if it's a reasonable timestamp
@@ -373,16 +458,22 @@ function isDateField(sampleValues: any[], fieldName: string): boolean {
  * Check if field contains facet-like values (hierarchical categories)
  */
 function isFacetField(sampleValues: any[], fieldName: string): boolean {
-    const facetFieldNames = ["category", "tag", "type", "section", "department"];
-    const hasFacetName = facetFieldNames.some(name =>
-        fieldName.toLowerCase().includes(name)
+    const facetFieldNames = [
+        "category",
+        "tag",
+        "type",
+        "section",
+        "department",
+    ];
+    const hasFacetName = facetFieldNames.some((name) =>
+        fieldName.toLowerCase().includes(name),
     );
 
     if (!hasFacetName) return false;
 
     // Check if values look like hierarchical paths
-    return sampleValues.some(value =>
-        typeof value === "string" && value.includes("/")
+    return sampleValues.some(
+        (value) => typeof value === "string" && value.includes("/"),
     );
 }
 
@@ -392,7 +483,7 @@ function isFacetField(sampleValues: any[], fieldName: string): boolean {
 function suggestFieldConfig(
     searchcraftType: string,
     fieldName: string,
-    isArray: boolean
+    isArray: boolean,
 ): FieldAnalysis["suggested_config"] {
     const config = {
         stored: true, // Most fields should be stored for display
@@ -421,25 +512,32 @@ function suggestFieldConfig(
         {
             // ID fields - usually don't need to be searchable
             patterns: ["id"],
-            config: { indexed: false, fast: false }
+            config: { indexed: false, fast: false },
         },
         {
             // URL/Link fields - usually don't need to be searchable
             patterns: ["url", "link"],
-            config: { indexed: false }
+            config: { indexed: false },
         },
         {
             // Media fields - usually don't need to be searchable
-            patterns: ["image", "thumbnail", "photo", "video", "path", "poster"],
-            config: { indexed: false }
-        }
+            patterns: [
+                "image",
+                "thumbnail",
+                "photo",
+                "video",
+                "path",
+                "poster",
+            ],
+            config: { indexed: false },
+        },
     ];
 
     const name = fieldName.toLowerCase();
 
     // Apply special configurations based on field name patterns
     for (const { patterns, config: patternConfig } of fieldPatterns) {
-        if (patterns.some(pattern => name.includes(pattern))) {
+        if (patterns.some((pattern) => name.includes(pattern))) {
             Object.assign(config, patternConfig);
             break; // Apply only the first matching pattern
         }
@@ -459,27 +557,33 @@ function suggestWeight(fieldName: string): number {
         {
             // Higher weight for title-like fields
             patterns: ["title", "name", "headline", "heading"],
-            weight: 2.0
+            weight: 2.0,
         },
         {
             // Lower weight for description/content fields
             patterns: ["description", "content", "body", "overview"],
-            weight: 0.5
+            weight: 0.5,
         },
         {
             // Lower weight for summary/excerpt fields
-            patterns: ["summary", "excerpt", "snippet", "subhead", "subheadline"],
-            weight: 1.0
+            patterns: [
+                "summary",
+                "excerpt",
+                "snippet",
+                "subhead",
+                "subheadline",
+            ],
+            weight: 1.0,
         },
         {
             patterns: ["tags", "keywords"],
-            weight: 0.8
-        }
+            weight: 0.8,
+        },
     ];
 
     // Check each pattern group
     for (const { patterns, weight } of weightPatterns) {
-        if (patterns.some(pattern => name.includes(pattern))) {
+        if (patterns.some((pattern) => name.includes(pattern))) {
             return weight;
         }
     }

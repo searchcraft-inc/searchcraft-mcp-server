@@ -1,15 +1,16 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { readFile, access, writeFile, mkdir, rm } from "node:fs/promises";
-import { resolve, join, dirname } from "node:path";
+import { exec } from "node:child_process";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { exec } from "node:child_process";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createErrorResponse, debugLog } from "../../helpers.js";
 import {
-    createErrorResponse,
-    debugLog,
-} from "../../helpers.js";
+    type FieldAnalysis,
+    type JsonStructureAnalysis,
+    analyzeJsonStructure,
+} from "../import/json-analyzer.js";
 import { CreateViteAppSchema } from "../schemas.js";
-import { analyzeJsonStructure, type JsonStructureAnalysis, type FieldAnalysis } from "../import/json-analyzer.js";
 
 interface FieldConfig {
     type: string;
@@ -21,7 +22,9 @@ interface FieldConfig {
 }
 
 // Helper function to generate schema fields from analysis (reusing existing logic)
-function generateSchemaFields(analysis: JsonStructureAnalysis): Record<string, FieldConfig> {
+function generateSchemaFields(
+    analysis: JsonStructureAnalysis,
+): Record<string, FieldConfig> {
     const fields: Record<string, FieldConfig> = {};
 
     for (const [fieldName, fieldAnalysis] of Object.entries(analysis.fields)) {
@@ -62,37 +65,70 @@ function generateSchemaFields(analysis: JsonStructureAnalysis): Record<string, F
 const execAsync = promisify(exec);
 
 // Helper functions to reuse existing field detection logic
-function findFieldByPatterns(fieldNames: string[], patterns: string[]): string | undefined {
-    return fieldNames.find(name =>
-        patterns.some(pattern => name.toLowerCase().includes(pattern.toLowerCase()))
+function findFieldByPatterns(
+    fieldNames: string[],
+    patterns: string[],
+): string | undefined {
+    return fieldNames.find((name) =>
+        patterns.some((pattern) =>
+            name.toLowerCase().includes(pattern.toLowerCase()),
+        ),
     );
 }
 
 function getTypeScriptType(field: FieldAnalysis): string {
-    if (field.searchcraft_type === 'bool') return 'boolean';
-    if (field.searchcraft_type === 'f64' || field.searchcraft_type === 'u64') return 'number';
-    if (field.is_array) return 'string[]';
-    return 'string';
+    if (field.searchcraft_type === "bool") return "boolean";
+    if (field.searchcraft_type === "f64" || field.searchcraft_type === "u64")
+        return "number";
+    if (field.is_array) return "string[]";
+    return "string";
 }
 
-function generateSearchResultTemplate(analysis: JsonStructureAnalysis, appName: string): string {
+function generateSearchResultTemplate(
+    analysis: JsonStructureAnalysis,
+    appName: string,
+): string {
     const fields = analysis.fields;
     const fieldNames = Object.keys(fields);
 
-    const titleField = findFieldByPatterns(fieldNames, ["title", "name", "headline", "heading"]) || fieldNames[0];
-    const descriptionField = findFieldByPatterns(fieldNames, ["description", "overview", "summary", "content", "body"]);
-    const imageField = findFieldByPatterns(fieldNames, ["image", "photo", "picture", "poster", "thumbnail"]);
+    const titleField =
+        findFieldByPatterns(fieldNames, [
+            "title",
+            "name",
+            "headline",
+            "heading",
+        ]) || fieldNames[0];
+    const descriptionField = findFieldByPatterns(fieldNames, [
+        "description",
+        "overview",
+        "summary",
+        "content",
+        "body",
+    ]);
+    const imageField = findFieldByPatterns(fieldNames, [
+        "image",
+        "photo",
+        "picture",
+        "poster",
+        "thumbnail",
+    ]);
 
-    const dateField = fieldNames.find(name =>
-        fields[name].searchcraft_type === 'datetime' ||
-        findFieldByPatterns([name], ["date", "time", "created", "published", "updated"])
+    const dateField = fieldNames.find(
+        (name) =>
+            fields[name].searchcraft_type === "datetime" ||
+            findFieldByPatterns(
+                [name],
+                ["date", "time", "created", "published", "updated"],
+            ),
     );
 
-    const interfaceFields = fieldNames.map(fieldName => {
-        const field = fields[fieldName];
-        const tsType = getTypeScriptType(field);
-        return `\t${fieldName}: ${tsType};`;
-    }).join('\n');
+    const interfaceFields = fieldNames
+        .map((fieldName) => {
+            const field = fields[fieldName];
+            const tsType = getTypeScriptType(field);
+            return `\t${fieldName}: ${tsType};`;
+        })
+        .join("\n");
 
     let templateHtml = `
   <div class="search-result-item">`;
@@ -119,26 +155,47 @@ function generateSearchResultTemplate(analysis: JsonStructureAnalysis, appName: 
     }
 
     // Add other important fields (reusing existing field filtering patterns)
-    const excludedFields = [titleField, descriptionField, imageField, dateField];
-    const mediaPatterns = ["image", "thumbnail", "photo", "video", "path", "poster", "url", "link"];
+    const excludedFields = [
+        titleField,
+        descriptionField,
+        imageField,
+        dateField,
+    ];
+    const mediaPatterns = [
+        "image",
+        "thumbnail",
+        "photo",
+        "video",
+        "path",
+        "poster",
+        "url",
+        "link",
+    ];
 
-    const otherFields = fieldNames.filter(name =>
-        !excludedFields.includes(name) &&
-        fields[name].searchcraft_type === 'text' &&
-        !fields[name].is_array &&
-        !mediaPatterns.some(pattern => name.toLowerCase().includes(pattern)) // Exclude media fields
-    ).slice(0, 2); // Limit to 2 additional fields
+    const otherFields = fieldNames
+        .filter(
+            (name) =>
+                !excludedFields.includes(name) &&
+                fields[name].searchcraft_type === "text" &&
+                !fields[name].is_array &&
+                !mediaPatterns.some((pattern) =>
+                    name.toLowerCase().includes(pattern),
+                ), // Exclude media fields
+        )
+        .slice(0, 2); // Limit to 2 additional fields
 
     // biome-ignore lint/complexity/noForEach: <explanation>
-    otherFields.forEach(fieldName => {
+    otherFields.forEach((fieldName) => {
         templateHtml += `
       <p class="result-field"><strong>${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}:</strong> \${data.${fieldName}}</p>`;
     });
 
     // Add array fields as tags
-    const arrayFields = fieldNames.filter(name => fields[name].is_array).slice(0, 2);
+    const arrayFields = fieldNames
+        .filter((name) => fields[name].is_array)
+        .slice(0, 2);
     // biome-ignore lint/complexity/noForEach: <explanation>
-    arrayFields.forEach(fieldName => {
+    arrayFields.forEach((fieldName) => {
         templateHtml += `
       <div class="result-tags">
         \${data.${fieldName} && data.${fieldName}.length > 0 ? data.${fieldName}.map(item => \`<span class="tag">\${item}</span>\`).join('') : ''}
@@ -148,8 +205,6 @@ function generateSearchResultTemplate(analysis: JsonStructureAnalysis, appName: 
     templateHtml += `
     </div>
   </div>`;
-
-
 
     return `import type { SearchResultTemplate } from "@searchcraft/javascript-sdk";
 
@@ -184,7 +239,7 @@ export const registerCreateViteApp = (server: McpServer) => {
         "Creates a generic search app by analyzing a JSON dataset and generating a Vite app with Searchcraft integration",
         {
             request: CreateViteAppSchema.describe(
-                "Complete request to create a Vite app from JSON dataset"
+                "Complete request to create a Vite app from JSON dataset",
             ),
         },
         async ({ request }) => {
@@ -197,7 +252,7 @@ export const registerCreateViteApp = (server: McpServer) => {
                 VITE_READ_KEY,
                 sample_size = 50,
                 search_fields,
-                weight_multipliers
+                weight_multipliers,
             } = request;
             debugLog("[Tool Call] create_vite_app");
             try {
@@ -212,7 +267,9 @@ export const registerCreateViteApp = (server: McpServer) => {
                 try {
                     await access(join(projectRoot, "package.json"));
                 } catch {
-                    return createErrorResponse(`Could not find package.json at expected project root: ${projectRoot}`);
+                    return createErrorResponse(
+                        `Could not find package.json at expected project root: ${projectRoot}`,
+                    );
                 }
 
                 // Step 1: Load and analyze JSON data
@@ -224,12 +281,16 @@ export const registerCreateViteApp = (server: McpServer) => {
                     try {
                         const response = await fetch(data_path);
                         if (!response.ok) {
-                            return createErrorResponse(`Failed to fetch JSON from URL: ${response.status} ${response.statusText}`);
+                            return createErrorResponse(
+                                `Failed to fetch JSON from URL: ${response.status} ${response.statusText}`,
+                            );
                         }
                         const jsonText = await response.text();
                         jsonData = JSON.parse(jsonText);
                     } catch (error) {
-                        return createErrorResponse(`Failed to fetch or parse JSON from URL: ${error}`);
+                        return createErrorResponse(
+                            `Failed to fetch or parse JSON from URL: ${error}`,
+                        );
                     }
                 } else {
                     debugLog(`Reading JSON from file: ${data_path}`);
@@ -239,7 +300,9 @@ export const registerCreateViteApp = (server: McpServer) => {
                         const fileContent = await readFile(filePath, "utf-8");
                         jsonData = JSON.parse(fileContent);
                     } catch (error) {
-                        return createErrorResponse(`Failed to read or parse JSON from file: ${error}`);
+                        return createErrorResponse(
+                            `Failed to read or parse JSON from file: ${error}`,
+                        );
                     }
                 }
 
@@ -247,26 +310,41 @@ export const registerCreateViteApp = (server: McpServer) => {
                 debugLog("Step 2: Analyzing JSON structure");
 
                 // Check if data is nested and provide helpful info
-                if (!Array.isArray(jsonData) && typeof jsonData === "object" && jsonData !== null) {
+                if (
+                    !Array.isArray(jsonData) &&
+                    typeof jsonData === "object" &&
+                    jsonData !== null
+                ) {
                     // Simple check for immediate array properties (for logging purposes)
                     const jsonObj = jsonData as Record<string, unknown>;
                     const immediateArrays = Object.keys(jsonObj)
-                        .filter(key => Array.isArray(jsonObj[key]))
-                        .map(key => ({ key, length: (jsonObj[key] as unknown[]).length }));
+                        .filter((key) => Array.isArray(jsonObj[key]))
+                        .map((key) => ({
+                            key,
+                            length: (jsonObj[key] as unknown[]).length,
+                        }));
 
                     if (immediateArrays.length > 0) {
-                        debugLog(`Detected nested data structure with ${immediateArrays.length} immediate array(s). Analyzer will find the best array to use.`);
+                        debugLog(
+                            `Detected nested data structure with ${immediateArrays.length} immediate array(s). Analyzer will find the best array to use.`,
+                        );
                     }
                 }
 
                 const analysis = analyzeJsonStructure(jsonData, sample_size);
-                debugLog(`Analyzed ${analysis.total_objects_analyzed} objects with ${Object.keys(analysis.fields).length} unique fields`);
+                debugLog(
+                    `Analyzed ${analysis.total_objects_analyzed} objects with ${Object.keys(analysis.fields).length} unique fields`,
+                );
 
                 // Use provided search_fields or fall back to suggested ones
-                const finalSearchFields = search_fields || analysis.suggested_search_fields;
-                const finalWeightMultipliers = weight_multipliers || analysis.suggested_weight_multipliers;
+                const finalSearchFields =
+                    search_fields || analysis.suggested_search_fields;
+                const finalWeightMultipliers =
+                    weight_multipliers || analysis.suggested_weight_multipliers;
 
-                debugLog(`Analysis complete. Found ${Object.keys(analysis.fields).length} fields`);
+                debugLog(
+                    `Analysis complete. Found ${Object.keys(analysis.fields).length} fields`,
+                );
                 debugLog(`Search fields: ${finalSearchFields.join(", ")}`);
 
                 // Step 3: Setup app directory
@@ -279,7 +357,9 @@ export const registerCreateViteApp = (server: McpServer) => {
                     await mkdir(appsRoot, { recursive: true });
                     debugLog("Successfully created apps directory");
                 } catch (error) {
-                    return createErrorResponse(`Failed to create apps directory at ${appsRoot}: ${error}`);
+                    return createErrorResponse(
+                        `Failed to create apps directory at ${appsRoot}: ${error}`,
+                    );
                 }
 
                 try {
@@ -297,11 +377,13 @@ export const registerCreateViteApp = (server: McpServer) => {
                         `/usr/bin/git clone --depth 1 https://github.com/searchcraft-inc/vite-react-searchcraft-template.git ${app_name}`,
                         {
                             cwd: appsRoot,
-                            timeout: 60000 // 1 minute timeout
-                        }
+                            timeout: 60000, // 1 minute timeout
+                        },
                     );
                 } catch (error) {
-                    return createErrorResponse(`Failed to clone template repository: ${error}`);
+                    return createErrorResponse(
+                        `Failed to clone template repository: ${error}`,
+                    );
                 }
 
                 // Step 5: Install dependencies
@@ -309,47 +391,61 @@ export const registerCreateViteApp = (server: McpServer) => {
                 try {
                     const installEnv = {
                         PATH: "$/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin/",
-                        SHELL: "/bin/bash"
+                        SHELL: "/bin/bash",
                     };
 
-                    debugLog("Starting dependency installation (this may take 30-60 seconds)...");
+                    debugLog(
+                        "Starting dependency installation (this may take 30-60 seconds)...",
+                    );
 
                     try {
                         // Try yarn first (since template has yarn.lock)
-                        await execAsync('yarn', {
+                        await execAsync("yarn", {
                             cwd: appDir,
                             timeout: 180000, // 3 minutes timeout
-                            env: { ...process.env, ...installEnv }
+                            env: { ...process.env, ...installEnv },
                         });
-                        debugLog("Dependencies installed successfully with yarn");
+                        debugLog(
+                            "Dependencies installed successfully with yarn",
+                        );
                     } catch (installError) {
-                        debugLog("Yarn install failed, attempting cleanup and npm install...");
+                        debugLog(
+                            "Yarn install failed, attempting cleanup and npm install...",
+                        );
 
                         // Clean up node_modules
                         try {
                             await execAsync("/bin/rm -rf node_modules", {
                                 cwd: appDir,
-                                env: { ...process.env, ...installEnv }
+                                env: { ...process.env, ...installEnv },
                             });
                             debugLog("Cleaned up node_modules");
                         } catch (cleanupError) {
-                            debugLog("Cleanup failed, continuing with npm install attempt");
+                            debugLog(
+                                "Cleanup failed, continuing with npm install attempt",
+                            );
                         }
 
                         // Try npm install
-                        await execAsync('npm install', {
+                        await execAsync("npm install", {
                             cwd: appDir,
                             timeout: 180000, // 3 minutes timeout
-                            env: { ...process.env, ...installEnv }
+                            env: { ...process.env, ...installEnv },
                         });
-                        debugLog("Dependencies installed successfully with npm");
+                        debugLog(
+                            "Dependencies installed successfully with npm",
+                        );
                     }
                 } catch (error) {
-                    return createErrorResponse(`Failed to install dependencies: ${error}`);
+                    return createErrorResponse(
+                        `Failed to install dependencies: ${error}`,
+                    );
                 }
 
                 // Step 6: Create .env file
-                debugLog("Step 6: Creating .env file with provided configuration");
+                debugLog(
+                    "Step 6: Creating .env file with provided configuration",
+                );
                 const envContent = `VITE_ENDPOINT_URL=${VITE_ENDPOINT_URL}
 VITE_INDEX_NAME=${VITE_INDEX_NAME}
 VITE_READ_KEY=${VITE_READ_KEY}`;
@@ -358,7 +454,9 @@ VITE_READ_KEY=${VITE_READ_KEY}`;
                     await writeFile(join(appDir, ".env"), envContent);
                     debugLog(".env file created successfully");
                 } catch (error) {
-                    return createErrorResponse(`Failed to create .env file: ${error}`);
+                    return createErrorResponse(
+                        `Failed to create .env file: ${error}`,
+                    );
                 }
 
                 // Step 7: Generate schema files
@@ -366,30 +464,37 @@ VITE_READ_KEY=${VITE_READ_KEY}`;
 
                 // Create components directory
                 try {
-                    await mkdir(join(appDir, "src", "components"), { recursive: true });
+                    await mkdir(join(appDir, "src", "components"), {
+                        recursive: true,
+                    });
                     debugLog("Components directory created");
                 } catch (error) {
-                    return createErrorResponse(`Failed to create components directory: ${error}`);
+                    return createErrorResponse(
+                        `Failed to create components directory: ${error}`,
+                    );
                 }
 
                 // Generate schema based on analysis (reusing existing logic)
                 const fields = generateSchemaFields(analysis);
 
                 const exampleSchema = {
-                    "index": {
-                        "name": VITE_INDEX_NAME,
-                        "search_fields": finalSearchFields,
-                        "fields": fields,
+                    index: {
+                        name: VITE_INDEX_NAME,
+                        search_fields: finalSearchFields,
+                        fields: fields,
                         ...(Object.keys(finalWeightMultipliers).length > 0 && {
-                            "weight_multipliers": finalWeightMultipliers
-                        })
-                    }
+                            weight_multipliers: finalWeightMultipliers,
+                        }),
+                    },
                 };
 
                 // Generate sample data from the first few items
                 let exampleData: unknown[] = [];
                 if (Array.isArray(jsonData)) {
-                    exampleData = jsonData.slice(0, Math.min(3, jsonData.length));
+                    exampleData = jsonData.slice(
+                        0,
+                        Math.min(3, jsonData.length),
+                    );
                 } else {
                     exampleData = [jsonData];
                 }
@@ -397,36 +502,50 @@ VITE_READ_KEY=${VITE_READ_KEY}`;
                 // Write schema files
                 try {
                     await writeFile(
-                        join(appDir, "ExampleSearchResultTemplateIndexSchema.json"),
-                        JSON.stringify(exampleSchema, null, 2)
+                        join(
+                            appDir,
+                            "ExampleSearchResultTemplateIndexSchema.json",
+                        ),
+                        JSON.stringify(exampleSchema, null, 2),
                     );
-                    debugLog("Updated ExampleSearchResultTemplateIndexSchema.json");
+                    debugLog(
+                        "Updated ExampleSearchResultTemplateIndexSchema.json",
+                    );
                 } catch (error) {
-                    return createErrorResponse(`Failed to update ExampleSearchResultTemplateIndexSchema.json: ${error}`);
+                    return createErrorResponse(
+                        `Failed to update ExampleSearchResultTemplateIndexSchema.json: ${error}`,
+                    );
                 }
 
                 try {
                     await writeFile(
                         join(appDir, "ExampleSearchResultTemplate.json"),
-                        JSON.stringify(exampleData, null, 2)
+                        JSON.stringify(exampleData, null, 2),
                     );
                     debugLog("Updated ExampleSearchResultTemplate.json");
                 } catch (error) {
-                    return createErrorResponse(`Failed to update ExampleSearchResultTemplate.json: ${error}`);
+                    return createErrorResponse(
+                        `Failed to update ExampleSearchResultTemplate.json: ${error}`,
+                    );
                 }
 
                 // Step 8: Generate dynamic search result template
                 debugLog("Step 8: Generating dynamic search result template");
-                const templateTs = generateSearchResultTemplate(analysis, app_name);
+                const templateTs = generateSearchResultTemplate(
+                    analysis,
+                    app_name,
+                );
 
                 try {
                     await writeFile(
                         join(appDir, "src", "ExampleSearchResultTemplate.ts"),
-                        templateTs
+                        templateTs,
                     );
                     debugLog("Updated src/ExampleSearchResultTemplate.ts");
                 } catch (error) {
-                    return createErrorResponse(`Failed to update src/ExampleSearchResultTemplate.ts: ${error}`);
+                    return createErrorResponse(
+                        `Failed to update src/ExampleSearchResultTemplate.ts: ${error}`,
+                    );
                 }
 
                 // Step 9: Update App.tsx
@@ -511,14 +630,19 @@ export default App;`;
                     await writeFile(join(appDir, "src", "App.tsx"), appTsx);
                     debugLog("Updated src/App.tsx");
                 } catch (error) {
-                    return createErrorResponse(`Failed to update src/App.tsx: ${error}`);
+                    return createErrorResponse(
+                        `Failed to update src/App.tsx: ${error}`,
+                    );
                 }
 
                 // Step 10: Update App.css with generic styling
                 debugLog("Step 10: Updating App.css with generic styling");
                 try {
                     // Read the existing App.css
-                    const existingCss = await readFile(join(appDir, "src", "App.css"), 'utf-8');
+                    const existingCss = await readFile(
+                        join(appDir, "src", "App.css"),
+                        "utf-8",
+                    );
 
                     // Add generic search result styles
                     const genericStyles = `
@@ -636,9 +760,13 @@ export default App;`;
 
                     const updatedCss = existingCss + genericStyles;
                     await writeFile(join(appDir, "src", "App.css"), updatedCss);
-                    debugLog("Updated src/App.css with generic search result styles");
+                    debugLog(
+                        "Updated src/App.css with generic search result styles",
+                    );
                 } catch (error) {
-                    return createErrorResponse(`Failed to update src/App.css: ${error}`);
+                    return createErrorResponse(
+                        `Failed to update src/App.css: ${error}`,
+                    );
                 }
 
                 debugLog(`${app_name} app setup completed successfully`);
@@ -662,7 +790,13 @@ Analysis Summary:
 - Total objects analyzed: ${analysis.total_objects_analyzed}
 - Fields found: ${Object.keys(analysis.fields).length}
 - Search fields: ${finalSearchFields.join(", ")}
-${Object.keys(finalWeightMultipliers).length > 0 ? `- Weight multipliers: ${Object.entries(finalWeightMultipliers).map(([k, v]) => `${k}:${v}`).join(", ")}` : ""}
+${
+    Object.keys(finalWeightMultipliers).length > 0
+        ? `- Weight multipliers: ${Object.entries(finalWeightMultipliers)
+              .map(([k, v]) => `${k}:${v}`)
+              .join(", ")}`
+        : ""
+}
 
 Files created/updated:
 - ExampleSearchResultTemplateIndexSchema.json - Schema definition
@@ -680,15 +814,16 @@ The template includes:
 - React + Vite setup with Searchcraft SDK
 - Dynamically generated search schema based on your JSON data
 - Responsive search interface with auto-generated result templates
-- Environment configuration for your Searchcraft instance`
-                        }
-                    ]
+- Environment configuration for your Searchcraft instance`,
+                        },
+                    ],
                 };
-
             } catch (error) {
                 debugLog(`Error in create_vite_app: ${error}`);
-                return createErrorResponse(`Failed to create vite app: ${error}`);
+                return createErrorResponse(
+                    `Failed to create vite app: ${error}`,
+                );
             }
-        }
+        },
     );
 };

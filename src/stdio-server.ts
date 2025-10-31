@@ -7,11 +7,11 @@ async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
 
-    process.on('SIGINT', async () => {
+    process.on("SIGINT", async () => {
         await server.close();
         process.exit(0);
     });
-    process.on('SIGTERM', async () => {
+    process.on("SIGTERM", async () => {
         await server.close();
         process.exit(0);
     });
