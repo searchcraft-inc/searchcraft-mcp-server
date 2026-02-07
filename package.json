@@ -33,7 +33,7 @@
         "dist"
     ],
     "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.24.0",
+        "@modelcontextprotocol/sdk": "^1.26.0",
         "dotenv": "^16.6.1",
         "express": "^5.1.0",
         "zod": "^3.25.76"
