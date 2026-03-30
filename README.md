@@ -414,6 +414,10 @@ If you already have a Searchcraft index set up, you can jump straight to creatin
 - **Production Ready** → Better separation of concerns for production deployments
 - **Easier Debugging** → Test search functionality independently of the UI
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/searchcraft-inc-searchcraft-mcp-server).
+
 ## Getting Started
 
 ### Environment Variables
